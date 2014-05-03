@@ -1,0 +1,5 @@
+name: cors_proxy
+dependencies:
+  uri: any
+  utf: any
+  http: any
