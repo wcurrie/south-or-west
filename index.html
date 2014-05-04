@@ -44,8 +44,8 @@
         <thead>
             <tr>
                 <th>Site</th>
-                <th>Air ºC</th>
-                <th>Feel ºC</th>
+                <th>Air &deg;C</th>
+                <th>Feel &deg;C</th>
                 <th>Humidity</th>
                 <th>Wind</th>
                 <th>Rain</th>
@@ -154,7 +154,7 @@
 
 //    var urls = ["nowra.json", "mt-boyce.json"];
 //    var urls = ["http://www.bom.gov.au/fwo/IDN60801/IDN60801.94750.json", "http://www.bom.gov.au/fwo/IDN60801/IDN60801.94743.json"];
-    var urls = ["http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94750.json", "http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94743.json"];
+    var urls = ["/fwo/IDN60801/IDN60801.94750.json", "/fwo/IDN60801/IDN60801.94743.json"];
 
     Promise.all(urls.map(loadJson)).then(function(data) {
 
@@ -196,7 +196,7 @@
                 .attr("transform", "rotate(-90)")
                 .attr("y", -25)
                 .style("text-anchor", "end")
-                .text("Temperature (ºC)");
+                .html("Temperature (&deg;C)");
 
         var site = svg.selectAll(".site")
                 .data(sites)
