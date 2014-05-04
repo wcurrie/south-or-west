@@ -17,6 +17,7 @@ serveFile(String name, HttpRequest request, String type) {
 }
 
 makeProxyRequest(HttpRequest request) {
+  // CORS headers only required if .html is hosted elsewhere
   request.response
     ..headers.set("Access-Control-Allow-Origin", "*")
     ..headers.set("Access-Control-Allow-Credentials", "true")
