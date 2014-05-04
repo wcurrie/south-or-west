@@ -6,20 +6,27 @@ import 'package:http/http.dart' as http;
 final HOST = "0.0.0.0";
 final PORT = int.parse(Platform.environment.containsKey('PORT') ? Platform.environment['PORT'] : "5555");
 
+serveFile(String name, HttpRequest request, String type) {
+  new File(name).readAsBytes().then((List<int> s) {
+    request.response
+      ..headers.add("Content-Type", type)
+      ..add(s)
+      ..close();
+  });
+}
+
 void main() {
 
   HttpServer.bind(HOST, PORT).then((server) {
     server.listen((HttpRequest request) {
       print(request.uri);
 
-      if (request.uri.path == "/index.html") {
-        new File("index.html").readAsString().then((String s) {
-          request.response
-            ..headers.add("Content-Type", "text/html")
-            ..write(s)
-            ..close();
-        });
-      } else {
+      var file = request.uri.path;
+      if (file == "/index.html" || file == "/") {
+        serveFile("index.html", request, "text/html");
+      } else if (file == "/favicon.ico") {
+        serveFile("favicon.ico", request, "image/vnd.microsoft.icon");
+      } else if (file.startsWith("/fwo")) {
         request.response
           ..headers.set("Access-Control-Allow-Origin", "*")
           ..headers.set("Access-Control-Allow-Credentials", "true")
