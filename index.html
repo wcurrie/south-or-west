@@ -34,7 +34,11 @@
     th {
         text-align: left;
     }
-    
+
+    .explanation {
+        clear: both;
+    }
+
 </style>
 <body>
 <div class="chart"></div>
@@ -53,6 +57,16 @@
         </thead>
         <tbody id="observations"></tbody>
     </table>
+</div>
+<div class="explanation" style="visibility: hidden">
+    <h3>What's going on here?</h3>
+    <p>
+        The following observations from the <a href="http://bom.gov.au">BOM</a> are being plotted using <a href="http://d3js.org/">d3.js</a>
+    </p>
+    <ul id="source-list">
+    </ul>
+    
+    <p>Want the code for some strange reason? See <a href="https://github.com/wcurrie/south-or-west">github</a>.</p>
 </div>
 <!--<script src="d3.js"></script>-->
 <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.6/d3.min.js"></script>
@@ -153,7 +167,6 @@
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 //    var urls = ["nowra.json", "mt-boyce.json"];
-//    var urls = ["http://www.bom.gov.au/fwo/IDN60801/IDN60801.94750.json", "http://www.bom.gov.au/fwo/IDN60801/IDN60801.94743.json"];
     var urls = ["/fwo/IDN60801/IDN60801.94750.json", "/fwo/IDN60801/IDN60801.94743.json"];
 
     Promise.all(urls.map(loadJson)).then(function(data) {
@@ -263,7 +276,20 @@
         });
         showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
 
-        d3.select(".tooltip").style("visibility", "");
+        d3.select("#source-list")
+                .selectAll("li")
+                .data(data)
+                .enter()
+                .append("li")
+                .append("a")
+                .attr("href", function (d) {
+                    var id = d.observations.header[0].ID;
+                    var wmo = d.observations.data[0].wmo;
+                    return "http://www.bom.gov.au/products/" + id + "/" + id + "." + wmo + ".shtml";
+                })
+                .text(function(d) { return d.observations.header[0].name })
+
+        d3.selectAll(".tooltip,.explanation").style("visibility", "");
 
     }, function(error) {
         console.log("doh", error);
