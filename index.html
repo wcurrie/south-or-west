@@ -26,9 +26,34 @@
     .area {
         opacity: 0.5;
     }
+
+    .chart {
+        float: left;
+    }
+
+    th {
+        text-align: left;
+    }
     
 </style>
 <body>
+<div class="chart"></div>
+<div class="tooltip">
+    <div><span>Time:</span> <span id="time"></span></div>
+    <table>
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Air ºC</th>
+                <th>Feel ºC</th>
+                <th>Humidity</th>
+                <th>Wind</th>
+                <th>Rain</th>
+            </tr>
+        </thead>
+        <tbody id="observations"></tbody>
+    </table>
+</div>
 <script src="d3.js"></script>
 <script>
 
@@ -42,6 +67,48 @@
                 }
             });
         });
+    }
+
+    var tooltipDateFormat = d3.time.format("%d %B %H:%M");
+
+    function findObservationFor(site, date) {
+        var reference = date.getTime();
+        var scored = site.values.map(function (d) {
+            return {
+                delta: Math.abs(reference - d.date.getTime()),
+                observation: d.observation
+            };
+        });
+        scored.sort(function (a, b) {
+            return a.delta - b.delta
+        });
+        return scored[0].observation;
+    }
+
+    function showToolTip(now, observations) {
+        document.getElementById("time").textContent = tooltipDateFormat(now);
+
+        var rows = d3.select("#observations")
+                .selectAll("tr")
+                .data(observations);
+
+        var row = rows
+                .enter()
+                .append("tr");
+
+        row.append("td").attr("class", "name");
+        row.append("td").attr("class", "airTemp");
+        row.append("td").attr("class", "apparentTemp");
+        row.append("td").attr("class", "humidity");
+        row.append("td").attr("class", "wind");
+        row.append("td").attr("class", "rain");
+
+        rows.select(".name").text(function(d) { return d.name });
+        rows.select(".airTemp").text(function(d) { return d.air_temp });
+        rows.select(".apparentTemp").text(function(d) { return d.apparent_t });
+        rows.select(".humidity").text(function(d) { return d.rel_hum });
+        rows.select(".wind").text(function(d) { return d.wind_spd_kmh });
+        rows.select(".rain").text(function(d) { return d.rain_trace });
     }
 
     var loadJson = when.bind(null, d3.json);
@@ -78,15 +145,15 @@
             .y0(function(d) { return y(d.apparentTemp) })
             .y1(function(d) { return y(d.airTemp) });
 
-    var svg = d3.select("body").append("svg")
+    var svg = d3.select(".chart").append("svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var urls = ["nowra.json", "mt-boyce.json"];
+//    var urls = ["nowra.json", "mt-boyce.json"];
 //    var urls = ["http://www.bom.gov.au/fwo/IDN60801/IDN60801.94750.json", "http://www.bom.gov.au/fwo/IDN60801/IDN60801.94743.json"];
-//    var urls = ["http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94750.json", "http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94743.json"];
+    var urls = ["http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94750.json", "http://127.0.0.1:5555/fwo/IDN60801/IDN60801.94743.json"];
 
     Promise.all(urls.map(loadJson)).then(function(data) {
 
@@ -97,7 +164,8 @@
                     return {
                         date: parseDate(d.local_date_time_full),
                         airTemp: d.air_temp,
-                        apparentTemp: d.apparent_t
+                        apparentTemp: d.apparent_t,
+                        observation: d
                     };
                 })
             };
@@ -151,6 +219,48 @@
                 .attr("x", 3)
                 .attr("dy", ".35em")
                 .text(function(d) { return d.name; });
+
+        svg.selectAll(".site")
+                .attr("opacity", 1)
+                .on("mouseover", function(d, i) {
+                    svg.selectAll(".site").transition()
+                            .duration(250)
+                            .attr("opacity", function(d, j) {
+                                return j != i ? 0.6 : 1;
+                            })
+                })
+                .on("mouseout", function() {
+                    svg.selectAll(".site").transition()
+                            .duration(250)
+                            .attr("opacity", 1);
+                });
+
+        var vertical = d3.select(".chart")
+                .append("div")
+                .attr("class", "mouseLine")
+                .style("position", "absolute")
+                .style("z-index", "19")
+                .style("width", "1px")
+                .style("height", y.range()[0] + "px")
+                .style("top", "10px")
+                .style("bottom", "30px")
+                .style("left", "0px")
+                .style("background", "#fff");
+
+        d3.select(".chart")
+                .on("mousemove", function(){
+                    var mouseX = d3.mouse(this)[0];
+                    vertical.style("left", (mouseX + 5) + "px" );
+
+                    var time = x.invert(mouseX);
+                    var observed = sites.map(function(site) { return findObservationFor(site, time) });
+                    showToolTip(time, observed);
+                });
+
+        var mostRecent = sites.map(function (site) {
+            return site.values[site.values.length - 1].observation
+        });
+        showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
 
     }, function(error) {
         console.log("doh", error);
