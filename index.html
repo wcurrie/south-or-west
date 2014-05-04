@@ -287,7 +287,7 @@
                     var wmo = d.observations.data[0].wmo;
                     return "http://www.bom.gov.au/products/" + id + "/" + id + "." + wmo + ".shtml";
                 })
-                .text(function(d) { return d.observations.header[0].name })
+                .text(function(d) { return d.observations.header[0].name });
 
         d3.selectAll(".tooltip,.explanation").style("visibility", "");
 
