@@ -166,7 +166,6 @@
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-//    var urls = ["nowra.json", "mt-boyce.json"];
     var urls = ["/fwo/IDN60801/IDN60801.94750.json", "/fwo/IDN60801/IDN60801.94743.json"];
 
     Promise.all(urls.map(loadJson)).then(function(data) {
@@ -272,7 +271,7 @@
                 });
 
         var mostRecent = sites.map(function (site) {
-            return site.values[site.values.length - 1].observation
+            return site.values[0].observation
         });
         showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
 
