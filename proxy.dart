@@ -8,6 +8,7 @@ final PORT = int.parse(Platform.environment.containsKey('PORT') ? Platform.envir
 final LOCAL_MODE = Platform.executableArguments.contains('--local-mode');
 
 serveFile(String name, HttpRequest request, String type) {
+  print("serving file " + name);
   new File(name).readAsBytes().then((List<int> s) {
     request.response
       ..headers.add("Content-Type", type)
@@ -38,8 +39,6 @@ void main() {
 
   HttpServer.bind(HOST, PORT).then((server) {
     server.listen((HttpRequest request) {
-      print(request.uri);
-
       var file = request.uri.path;
       if (file == "/index.html" || file == "/") {
         serveFile("index.html", request, "text/html");
@@ -49,6 +48,7 @@ void main() {
         if (LOCAL_MODE) {
           serveFile(request.uri.pathSegments.last, request, "application/json");
         } else {
+          print("proxying " + request.uri.toString());
           makeProxyRequest(request);
         }
       }

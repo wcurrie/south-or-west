@@ -286,7 +286,7 @@
                     var mouseX = d3.mouse(this)[0];
                     vertical.style("left", (mouseX + 5) + "px" );
 
-                    var time = x.invert(mouseX);
+                    var time = x.invert(mouseX - margin.left);
                     var observed = sites.map(function(site) { return findObservationFor(site, time) });
                     showToolTip(time, observed);
                 });
