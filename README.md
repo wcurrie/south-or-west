@@ -4,6 +4,7 @@ Resources
 * d3 https://github.com/mbostock/d3/wiki/API-Reference
  * Mental model for d3 http://bost.ocks.org/mike/join/
 * ES6 Promises http://www.html5rocks.com/en/tutorials/es6/promises/
+ * Polyfill https://github.com/jakearchibald/es6-promise
 * BOM json API
 * Mouse over http://bl.ocks.org/WillTurman/4631136
 * Cors/cache proxy for BOM data (http server sample on dartlang site)
