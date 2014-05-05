@@ -171,139 +171,201 @@
 
     var stations = [
         {name: "Nowra", url: "IDN60801/IDN60801.94750", load: true},
-        {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: true}
-//        {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: true},
-//        {name: "Horsham", url: "IDV60801/IDV60801.95839", load: true}
+        {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: true},
+        {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
+        {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false}
     ];
 
-    d3.select("#source-list")
+    var lis = d3.select("#source-list")
             .selectAll("li")
             .data(stations)
             .enter()
-            .append("li")
-            .append("a")
+            .append("li");
+    lis.append("input")
+            .attr("type", "checkbox")
+            .attr("onclick", function(d) { return "toggleStation('" + d.name + "')" })
+            .attr("id", function(d) { return "show-" + d.name });
+    lis.append("a")
             .attr("href", function (d) {
                 return "http://www.bom.gov.au/products/" + d.url + ".shtml";
             })
             .text(function(d) { return d.name });
-
-    var urls = stations.map(function(s) { return "/fwo/" + s.url + ".json" });
-
-    Promise.all(urls.map(loadJson)).then(function(data) {
-
-        var sites = data.map(function(site) {
-            return {
-                name: site.observations.header[0].name,
-                values: site.observations.data.map(function(d) {
-                    return {
-                        date: parseDate(d.local_date_time_full),
-                        airTemp: d.air_temp,
-                        apparentTemp: d.apparent_t,
-                        observation: d
-                    };
-                })
-            };
-        });
-
-        color.domain(sites.map(function(site) { return site.name }));
-
-        x.domain([
-            d3.min(sites, function(c) { return d3.min(c.values, function(v) { return v.date; }); }),
-            d3.max(sites, function(c) { return d3.max(c.values, function(v) { return v.date; }); })
-        ]);
-
-        y.domain([
-            d3.min(sites, function(c) { return d3.min(c.values, function(v) { return d3.min([v.airTemp, v.apparentTemp]); }); }),
-            d3.max(sites, function(c) { return d3.max(c.values, function(v) { return d3.max([v.airTemp, v.apparentTemp]); }); })
-        ]);
-
-        svg.append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
-
-        svg.append("g")
-                .attr("class", "y axis")
-                .call(yAxis)
-                .append("text")
-                .attr("transform", "rotate(-90)")
-                .attr("y", -25)
-                .style("text-anchor", "end")
-                .html("Temperature (&deg;C)");
-
-        var site = svg.selectAll(".site")
-                .data(sites)
-                .enter().append("g")
-                .attr("class", "site");
-
-        site.append("path")
-                .attr("class", "line")
-                .attr("d", function(d) { return line(d.values); })
-                .style("stroke", function(d) { return color(d.name); });
-
-        site.append("path")
-                .attr("class", "area")
-                .style("fill", function(d) { return color(d.name); })
-                .datum(function(d) { return d.values; })
-                .attr("d", area);
-
-        site.append("text")
-                .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-                .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.airTemp) + ")"; })
-                .attr("x", 3)
-                .attr("dy", ".35em")
-                .text(function(d) { return d.name; });
-
-        svg.selectAll(".site")
-                .attr("opacity", 1)
-                .on("mouseover", function(d, i) {
-                    svg.selectAll(".site").transition()
-                            .duration(250)
-                            .attr("opacity", function(d, j) {
-                                return j != i ? 0.6 : 1;
-                            })
-                })
-                .on("mouseout", function() {
-                    svg.selectAll(".site").transition()
-                            .duration(250)
-                            .attr("opacity", 1);
-                });
-
-        var vertical = d3.select(".chart")
-                .append("div")
-                .attr("class", "mouseLine")
-                .style("position", "absolute")
-                .style("z-index", "19")
-                .style("width", "1px")
-                .style("height", y.range()[0] + "px")
-                .style("top", "10px")
-                .style("bottom", "30px")
-                .style("left", "0px")
-                .style("background", "#fff");
-
-        d3.select(".chart")
-                .on("mousemove", function(){
-                    var mouseX = d3.mouse(this)[0];
-                    vertical.style("left", (mouseX + 5) + "px" );
-
-                    var time = x.invert(mouseX - margin.left);
-                    var observed = sites.map(function(site) { return findObservationFor(site, time) });
-                    showToolTip(time, observed);
-                });
-
-        var mostRecent = sites.map(function (site) {
-            return site.values[0].observation
-        });
-        showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
-
-        d3.selectAll(".tooltip,.explanation").style("visibility", "");
-
-    }, function(error) {
-        console.log("doh", error);
-    }).catch(function(error) {
-        console.error(error);
-        console.log(error.stack)
+    stations.forEach(function(s) {
+        if (s.load) {
+            document.getElementById("show-" + s.name).checked = true;
+        }
     });
+
+    function toggleStation(name) {
+        var station = stations.filter(function (s) {
+            return s.name == name
+        })[0];
+        station.load = !station.load;
+        svg.selectAll("*").remove();
+        d3.select("#observations").selectAll("tr").remove();
+        plot();
+    }
+
+    var sites;
+
+    function plot() {
+        var urls = stations.filter(function(s) { return s.load }).map(function (s) {
+            return "/fwo/" + s.url + ".json"
+        });
+
+        Promise.all(urls.map(loadJson)).then(function (data) {
+
+            sites = data.map(function (site) {
+                return {
+                    name: site.observations.header[0].name,
+                    values: site.observations.data.map(function (d) {
+                        return {
+                            date: parseDate(d.local_date_time_full),
+                            airTemp: d.air_temp,
+                            apparentTemp: d.apparent_t,
+                            observation: d
+                        };
+                    })
+                };
+            });
+
+            color.domain(sites.map(function (site) {
+                return site.name
+            }));
+
+            x.domain([
+                d3.min(sites, function (c) {
+                    return d3.min(c.values, function (v) {
+                        return v.date;
+                    });
+                }),
+                d3.max(sites, function (c) {
+                    return d3.max(c.values, function (v) {
+                        return v.date;
+                    });
+                })
+            ]);
+
+            y.domain([
+                d3.min(sites, function (c) {
+                    return d3.min(c.values, function (v) {
+                        return d3.min([v.airTemp, v.apparentTemp]);
+                    });
+                }),
+                d3.max(sites, function (c) {
+                    return d3.max(c.values, function (v) {
+                        return d3.max([v.airTemp, v.apparentTemp]);
+                    });
+                })
+            ]);
+
+            svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(xAxis);
+
+            svg.append("g")
+                    .attr("class", "y axis")
+                    .call(yAxis)
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", -25)
+                    .style("text-anchor", "end")
+                    .html("Temperature (&deg;C)");
+
+            var site = svg.selectAll(".site")
+                    .data(sites)
+                    .enter().append("g")
+                    .attr("class", "site");
+
+            site.append("path")
+                    .attr("class", "line")
+                    .attr("d", function (d) {
+                        return line(d.values);
+                    })
+                    .style("stroke", function (d) {
+                        return color(d.name);
+                    });
+
+            site.append("path")
+                    .attr("class", "area")
+                    .style("fill", function (d) {
+                        return color(d.name);
+                    })
+                    .datum(function (d) {
+                        return d.values;
+                    })
+                    .attr("d", area);
+
+            site.append("text")
+                    .datum(function (d) {
+                        return {name: d.name, value: d.values[d.values.length - 1]};
+                    })
+                    .attr("transform", function (d) {
+                        return "translate(" + x(d.value.date) + "," + y(d.value.airTemp) + ")";
+                    })
+                    .attr("x", 3)
+                    .attr("dy", ".35em")
+                    .text(function (d) {
+                        return d.name;
+                    });
+
+            svg.selectAll(".site")
+                    .attr("opacity", 1)
+                    .on("mouseover", function (d, i) {
+                        svg.selectAll(".site").transition()
+                                .duration(250)
+                                .attr("opacity", function (d, j) {
+                                    return j != i ? 0.6 : 1;
+                                })
+                    })
+                    .on("mouseout", function () {
+                        svg.selectAll(".site").transition()
+                                .duration(250)
+                                .attr("opacity", 1);
+                    });
+
+            var mostRecent = sites.map(function (site) {
+                return site.values[0].observation
+            });
+            showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
+
+            d3.selectAll(".tooltip,.explanation").style("visibility", "");
+
+        }, function (error) {
+            console.log("doh", error);
+        }).catch(function (error) {
+            console.error(error);
+            console.log(error.stack)
+        });
+    }
+    plot();
+
+    var vertical = d3.select(".chart")
+            .append("div")
+            .attr("class", "mouseLine")
+            .style("position", "absolute")
+            .style("z-index", "19")
+            .style("width", "1px")
+            .style("height", y.range()[0] + "px")
+            .style("top", "10px")
+            .style("bottom", "30px")
+            .style("left", "0px")
+            .style("background", "#fff");
+
+    d3.select(".chart")
+            .on("mousemove", function () {
+                var mouseX = d3.mouse(this)[0];
+                vertical.style("left", (mouseX + 5) + "px");
+
+                var time = x.invert(mouseX - margin.left);
+                if (sites) {
+                    var observed = sites.map(function (site) {
+                        return findObservationFor(site, time)
+                    });
+                    showToolTip(time, observed);
+                }
+            });
 
 </script>
 
