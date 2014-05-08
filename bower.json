@@ -1,0 +1,21 @@
+{
+  "name": "bomq",
+  "version": "0.0.1",
+  "homepage": "https://github.com/wcurrie/south-or-west",
+  "authors": [
+    "Will Currie <will@currie.id.au>"
+  ],
+  "description": "Chart BOM weather observations",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "suncalc": "*",
+    "d3": "~3.4.6"
+  }
+}
