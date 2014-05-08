@@ -39,6 +39,11 @@
         clear: both;
     }
 
+    .night {
+        fill: black;
+        opacity: 0.07
+    }
+
 </style>
 <body>
 <div class="chart"></div>
@@ -131,6 +136,42 @@
         rows.select(".rain").text(function(d) { return d.rain_trace });
     }
 
+    function nightsPerSite(sites) {
+        var parseDay = d3.time.format("%Y%m%d").parse;
+
+        return sites.map(function(site) {
+            var lat, lon, dates = d3.set();
+
+            site.observations.data.forEach(function(d) {
+                dates.add(d.local_date_time_full.substr(0, 8));
+                lat = d.lat;
+                lon = d.lon;
+            });
+
+            var timesPerDay = dates.values().sort(d3.ascending()).map(function(d) {
+                var times = SunCalc.getTimes(parseDay(d), lat, lon);
+                return {
+                    up: times.sunrise, down: times.sunset
+                };
+            });
+
+            var startOfTime = new Date(0);
+            var endOfTime = new Date(Math.pow(2, 32) * 1000);
+
+            var nights = [{
+                start: startOfTime, end: timesPerDay[0].up
+            }];
+
+            timesPerDay.forEach(function(t, i) {
+                nights.push({
+                    start: t.down,
+                    end: i+1 < timesPerDay.length ? timesPerDay[i+1].up : endOfTime
+                });
+            });
+            return nights;
+        });
+    }
+
     var loadJson = when.bind(null, d3.json);
 
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
@@ -140,7 +181,8 @@
     var parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
 
     var x = d3.time.scale()
-            .range([0, width]);
+            .range([0, width])
+            .clamp(true);
 
     var y = d3.scale.linear()
             .range([height, 0]);
@@ -274,6 +316,19 @@
                     .attr("y", -25)
                     .style("text-anchor", "end")
                     .html("Temperature (&deg;C)");
+
+            var nights = nightsPerSite(data);
+
+            // TODO: vary night shading to follow site under cursor...
+            svg.selectAll(".night")
+                    .data(nights[0])
+                    .enter()
+                    .append("rect")
+                    .attr("x", function(d) { return x(d.start) })
+                    .attr("width", function(d) { return x(d.end) - x(d.start) })
+                    .attr("y", 0)
+                    .attr("height", y.range()[0])
+                    .attr("class", "night");
 
             var site = svg.selectAll(".site")
                     .data(sites)
