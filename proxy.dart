@@ -51,6 +51,14 @@ void main() {
           print("proxying " + request.uri.toString());
           makeProxyRequest(request);
         }
+      } else if (file.endsWith(".js")) {
+        serveFile(file.substring(1), request, "text/javascript");
+      } else {
+        print("Not found: " + file);
+        request.response
+          ..statusCode = 404
+          ..reasonPhrase = "Not found"
+          ..close();
       }
     });
   });
