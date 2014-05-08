@@ -245,12 +245,24 @@
             return s.name == name
         })[0];
         station.load = !station.load;
-        svg.selectAll("*").remove();
-        d3.select("#observations").selectAll("tr").remove();
         plot();
     }
 
-    var sites;
+    function extractSeriesPerSite(data) {
+        return data.map(function (site) {
+            return {
+                name: site.observations.header[0].name,
+                values: site.observations.data.map(function (d) {
+                    return {
+                        date: parseDate(d.local_date_time_full),
+                        airTemp: d.air_temp,
+                        apparentTemp: d.apparent_t,
+                        observation: d
+                    };
+                })
+            };
+        });
+    }
 
     function plot() {
         var urls = stations.filter(function(s) { return s.load }).map(function (s) {
@@ -259,19 +271,10 @@
 
         Promise.all(urls.map(loadJson)).then(function (data) {
 
-            sites = data.map(function (site) {
-                return {
-                    name: site.observations.header[0].name,
-                    values: site.observations.data.map(function (d) {
-                        return {
-                            date: parseDate(d.local_date_time_full),
-                            airTemp: d.air_temp,
-                            apparentTemp: d.apparent_t,
-                            observation: d
-                        };
-                    })
-                };
-            });
+            svg.selectAll("*").remove();
+            d3.select("#observations").selectAll("tr").remove();
+
+            var sites = extractSeriesPerSite(data);
 
             color.domain(sites.map(function (site) {
                 return site.name
