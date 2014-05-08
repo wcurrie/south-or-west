@@ -15,3 +15,7 @@ Next
 
 * Move to Google's AppEngine to get free scheduled tasks. Use Go on server instead?
 * Poll BOM site and store observations?
+* Make x-axis scale less odd
+* Responsive for iphone: bigger font, drag finger
+* Show wind and humidity
+* Add y-axis on right too
