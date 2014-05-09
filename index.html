@@ -49,6 +49,9 @@
         stroke-width: 0;
     }
 
+    .airDot {
+        fill: black;
+    }
 </style>
 <body>
 <div class="chart"></div>
@@ -139,6 +142,31 @@
         rows.select(".humidity").text(function(d) { return d.rel_hum });
         rows.select(".wind").text(function(d) { return d.wind_spd_kmh });
         rows.select(".rain").text(function(d) { return d.rain_trace });
+
+        var plotBox = d3.select(".plotBox");
+        var airTips = plotBox.selectAll("text.airTip")
+                .data(observations, function (d) { return d.name });
+        airTips
+                .attr("x", function() { return x(now) })
+                .attr("y", function(d) { return tempY(d.air_temp) })
+                .text(function(d) { return d.air_temp });
+        airTips.enter()
+                .append("text")
+                .attr("class", "airTip")
+                .attr("dy", -2)
+                .attr("dx", 2);
+        airTips.exit().remove();
+
+        var airDots = plotBox.selectAll(".airDot")
+                .data(observations, function (d) { return d.name });
+        airDots
+                .attr("cx", function() { return x(now) })
+                .attr("cy", function(d) { return tempY(d.air_temp) });
+        airDots.enter()
+                .append("circle")
+                .attr("class", "airDot")
+                .attr("r", "2");
+        airDots.exit().remove();
     }
 
     function nightsPerSite(sites) {
@@ -240,6 +268,7 @@
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
+            .attr("class", "plotBox")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     var stations = [
@@ -522,16 +551,17 @@
             .style("position", "absolute")
             .style("z-index", "19")
             .style("width", "1px")
-            .style("height", "530px")
-            .style("top", "0px")
+            .style("height", "500px")
+            .style("top", "30px")
             .style("bottom", "30px")
             .style("left", "0px")
-            .style("background", "#fff");
+            .style("background", "#000")
+            .style("opacity", "0.5");
 
     d3.select(".chart")
             .on("mousemove", function () {
                 var mouseX = d3.mouse(this)[0];
-                vertical.style("left", (mouseX + 5) + "px");
+                vertical.style("left", (mouseX + 7) + "px");
 
                 var time = x.invert(mouseX - margin.left);
                 if (sites) {
