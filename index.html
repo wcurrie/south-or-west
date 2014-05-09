@@ -44,6 +44,11 @@
         opacity: 0.07
     }
 
+    .rainTrace rect {
+        opacity: 0.3;
+        stroke-width: 0;
+    }
+
 </style>
 <body>
 <div class="chart"></div>
@@ -148,7 +153,7 @@
                 lon = d.lon;
             });
 
-            var timesPerDay = dates.values().sort(d3.ascending()).map(function(d) {
+            var timesPerDay = dates.values().sort(d3.ascending).map(function(d) {
                 var times = SunCalc.getTimes(parseDay(d), lat, lon);
                 return {
                     up: times.sunrise, down: times.sunset
@@ -176,7 +181,9 @@
 
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
             width = 960 - margin.left - margin.right,
-            height = 500 - margin.top - margin.bottom;
+            height = 550 - margin.top - margin.bottom,
+            rainHeight = 100,
+            airHeight = height - rainHeight;
 
     var parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
 
@@ -184,8 +191,12 @@
             .range([0, width])
             .clamp(true);
 
-    var y = d3.scale.linear()
-            .range([height, 0]);
+    var leftY = d3.scale.linear()
+            .range([airHeight, 0]);
+
+    var rightY = d3.scale.linear()
+            .range([height, airHeight])
+            .clamp(true);
 
     var color = d3.scale.category10();
 
@@ -193,19 +204,23 @@
             .scale(x)
             .orient("bottom");
 
-    var yAxis = d3.svg.axis()
-            .scale(y)
+    var leftYAxis = d3.svg.axis()
+            .scale(leftY)
+            .orient("left");
+
+    var rightYAxis = d3.svg.axis()
+            .scale(rightY)
             .orient("left");
 
     var line = d3.svg.line()
             .interpolate("basis")
             .x(function(d) { return x(d.date); })
-            .y(function(d) { return y(d.airTemp); });
+            .y(function(d) { return leftY(d.airTemp); });
 
-    var area = d3.svg.area()
+    var tempArea = d3.svg.area()
             .x(function(d) { return x(d.date) })
-            .y0(function(d) { return y(d.apparentTemp) })
-            .y1(function(d) { return y(d.airTemp) });
+            .y0(function(d) { return leftY(d.apparentTemp) })
+            .y1(function(d) { return leftY(d.airTemp) });
 
     var svg = d3.select(".chart").append("svg")
             .attr("width", width + margin.left + margin.right)
@@ -249,6 +264,7 @@
     }
 
     function extractSeriesPerSite(data) {
+        var ascending = d3.ascending;
         return data.map(function (site) {
             return {
                 name: site.observations.header[0].name,
@@ -259,11 +275,30 @@
                         apparentTemp: d.apparent_t,
                         observation: d
                     };
+                }).sort(function(d1, d2) {
+                    return ascending(d1.date.getTime(), d2.date.getTime());
                 })
             };
         });
     }
 
+    function extractRainTracePerSite(sites) {
+        var startOfTime = new Date(0);
+        var endOfTime = new Date(Math.pow(2, 32) * 1000);
+
+        return sites.map(function (site) {
+            var values = site.values.map(function (d, i, values) {
+                return {
+                    start: i == 0 ? startOfTime : d.date,
+                    end: i+1 < values.length ? values[i+1].date : endOfTime,
+                    rain: parseFloat(d.observation.rain_trace)
+                }
+            }).filter(function(v) { return v.rain > 0});
+            return { name: site.name, values: values };
+        });
+    }
+
+    var sites;  // for mouse move
     function plot() {
         var urls = stations.filter(function(s) { return s.load }).map(function (s) {
             return "/fwo/" + s.url + ".json"
@@ -274,7 +309,9 @@
             svg.selectAll("*").remove();
             d3.select("#observations").selectAll("tr").remove();
 
-            var sites = extractSeriesPerSite(data);
+            sites = extractSeriesPerSite(data);
+            var rainTracePerSite = extractRainTracePerSite(sites);
+            var nights = nightsPerSite(data);
 
             color.domain(sites.map(function (site) {
                 return site.name
@@ -293,7 +330,7 @@
                 })
             ]);
 
-            y.domain([
+            leftY.domain([
                 d3.min(sites, function (c) {
                     return d3.min(c.values, function (v) {
                         return d3.min([v.airTemp, v.apparentTemp]);
@@ -306,21 +343,37 @@
                 })
             ]);
 
+            rightY.domain([
+                0,
+                d3.max(rainTracePerSite, function (c) {
+                    return d3.max(c.values, function (v) { return v.rain; });
+                })
+            ]);
+
             svg.append("g")
                     .attr("class", "x axis")
                     .attr("transform", "translate(0," + height + ")")
                     .call(xAxis);
 
             svg.append("g")
-                    .attr("class", "y axis")
-                    .call(yAxis)
+                    .attr("class", "leftY axis")
+                    .call(leftYAxis)
                     .append("text")
                     .attr("transform", "rotate(-90)")
                     .attr("y", -25)
                     .style("text-anchor", "end")
                     .html("Temperature (&deg;C)");
 
-            var nights = nightsPerSite(data);
+            svg.append("g")
+                    .attr("class", "rightY axis")
+                    .attr("transform", "translate(" + width + ",0)")
+                    .call(rightYAxis)
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", 25)
+                    .attr("x", -400)
+                    .style("text-anchor", "end")
+                    .html("Rain since 9am (mm)");
 
             // TODO: vary night shading to follow site under cursor...
             svg.selectAll(".night")
@@ -330,7 +383,7 @@
                     .attr("x", function(d) { return x(d.start) })
                     .attr("width", function(d) { return x(d.end) - x(d.start) })
                     .attr("y", 0)
-                    .attr("height", y.range()[0])
+                    .attr("height", height)
                     .attr("class", "night");
 
             var site = svg.selectAll(".site")
@@ -355,14 +408,14 @@
                     .datum(function (d) {
                         return d.values;
                     })
-                    .attr("d", area);
+                    .attr("d", tempArea);
 
             site.append("text")
                     .datum(function (d) {
                         return {name: d.name, value: d.values[d.values.length - 1]};
                     })
                     .attr("transform", function (d) {
-                        return "translate(" + x(d.value.date) + "," + y(d.value.airTemp) + ")";
+                        return "translate(" + x(d.value.date) + "," + leftY(d.value.airTemp) + ")";
                     })
                     .attr("x", 3)
                     .attr("dy", ".35em")
@@ -377,13 +430,41 @@
                                 .duration(250)
                                 .attr("opacity", function (d, j) {
                                     return j != i ? 0.6 : 1;
-                                })
+                                });
                     })
                     .on("mouseout", function () {
                         svg.selectAll(".site").transition()
                                 .duration(250)
                                 .attr("opacity", 1);
                     });
+
+
+            var rainTraces = svg.selectAll(".rainTrace")
+                    .data(rainTracePerSite)
+                    .enter().append("g")
+                    .attr("class", "rainTrace")
+                    .attr("fill", function (d) {
+                        return color(d.name);
+                    })
+                    .style("stroke", function (d) {
+                        return color(d.name);
+                    });
+
+            var buckets = rainTraces.selectAll("rect")
+                    .data(function(d) { return d.values; })
+                    .enter();
+
+            buckets.append("rect")
+                    .attr("x", function(d) { return x(d.start) })
+                    .attr("y", function(d) { return rightY(d.rain) })
+                    .attr("width", function(d) { return x(d.end) - x(d.start) })
+                    .attr("height", function(d) { return height - rightY(d.rain) });
+
+            buckets.append("line")
+                    .attr("x1", function(d) {return x(d.start)})
+                    .attr("x2", function(d) {return x(d.end)})
+                    .attr("y1", function(d) {return rightY(d.rain)})
+                    .attr("y2", function(d) {return rightY(d.rain)});
 
             var mostRecent = sites.map(function (site) {
                 return site.values[0].observation
@@ -407,8 +488,8 @@
             .style("position", "absolute")
             .style("z-index", "19")
             .style("width", "1px")
-            .style("height", y.range()[0] + "px")
-            .style("top", "10px")
+            .style("height", "530px")
+            .style("top", "0px")
             .style("bottom", "30px")
             .style("left", "0px")
             .style("background", "#fff");
