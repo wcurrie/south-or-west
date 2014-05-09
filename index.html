@@ -118,6 +118,42 @@
         return scored[0].observation;
     }
 
+    function showValueAtMouselineIntersection(now, observations, attr, yScale, suffix) {
+        var joinByName = function (d) { return d.name };
+        var xPos = function () { return x(now) };
+        var yPos = function (d) { return yScale.call(null, d[attr]) };
+
+        var tipClassName = "tip-" + attr;
+        var dotClassName = "dot" + attr;
+        var plotBox = d3.select(".plotBox");
+
+        var airTips = plotBox
+                .selectAll("text." + tipClassName)
+                .data(observations, joinByName);
+        airTips
+                .attr("x", xPos)
+                .attr("y", yPos)
+                .text(function (d) { return d[attr] + suffix });
+        airTips.enter()
+                .append("text")
+                .attr("class", tipClassName)
+                .attr("dy", -2)
+                .attr("dx", 2);
+        airTips.exit().remove();
+
+        var airDots = plotBox
+                .selectAll("." + dotClassName)
+                .data(observations, joinByName);
+        airDots
+                .attr("cx", xPos)
+                .attr("cy", yPos);
+        airDots.enter()
+                .append("circle")
+                .attr("class", dotClassName)
+                .attr("r", "2");
+        airDots.exit().remove();
+    }
+
     function showToolTip(now, observations) {
         document.getElementById("time").textContent = tooltipDateFormat(now);
 
@@ -143,30 +179,9 @@
         rows.select(".wind").text(function(d) { return d.wind_spd_kmh });
         rows.select(".rain").text(function(d) { return d.rain_trace });
 
-        var plotBox = d3.select(".plotBox");
-        var airTips = plotBox.selectAll("text.airTip")
-                .data(observations, function (d) { return d.name });
-        airTips
-                .attr("x", function() { return x(now) })
-                .attr("y", function(d) { return tempY(d.air_temp) })
-                .text(function(d) { return d.air_temp });
-        airTips.enter()
-                .append("text")
-                .attr("class", "airTip")
-                .attr("dy", -2)
-                .attr("dx", 2);
-        airTips.exit().remove();
-
-        var airDots = plotBox.selectAll(".airDot")
-                .data(observations, function (d) { return d.name });
-        airDots
-                .attr("cx", function() { return x(now) })
-                .attr("cy", function(d) { return tempY(d.air_temp) });
-        airDots.enter()
-                .append("circle")
-                .attr("class", "airDot")
-                .attr("r", "2");
-        airDots.exit().remove();
+        showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0");
+        showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
+        showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
     }
 
     function nightsPerSite(sites) {
