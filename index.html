@@ -191,11 +191,16 @@
             .range([0, width])
             .clamp(true);
 
-    var leftY = d3.scale.linear()
+    var tempY = d3.scale.linear()
             .range([airHeight, 0]);
 
-    var rightY = d3.scale.linear()
+    var rainY = d3.scale.linear()
             .range([height, airHeight])
+            .clamp(true);
+
+    var humidityY = d3.scale.linear()
+            .range([height, airHeight])
+            .domain([0, 100])
             .clamp(true);
 
     var color = d3.scale.category10();
@@ -204,23 +209,32 @@
             .scale(x)
             .orient("bottom");
 
-    var leftYAxis = d3.svg.axis()
-            .scale(leftY)
+    var leftTemperatureYAxis = d3.svg.axis()
+            .scale(tempY)
+            .orient("left");
+
+    var leftHumidityYAxis = d3.svg.axis()
+            .scale(humidityY)
             .orient("left");
 
     var rightYAxis = d3.svg.axis()
-            .scale(rightY)
-            .orient("left");
+            .scale(rainY)
+            .orient("right");
 
-    var line = d3.svg.line()
+    var tempLine = d3.svg.line()
             .interpolate("basis")
             .x(function(d) { return x(d.date); })
-            .y(function(d) { return leftY(d.airTemp); });
+            .y(function(d) { return tempY(d.airTemp); });
+
+    var humidityLine = d3.svg.line()
+            .interpolate("basis")
+            .x(function(d) { return x(d.date); })
+            .y(function(d) { return humidityY(d.observation.rel_hum); });
 
     var tempArea = d3.svg.area()
             .x(function(d) { return x(d.date) })
-            .y0(function(d) { return leftY(d.apparentTemp) })
-            .y1(function(d) { return leftY(d.airTemp) });
+            .y0(function(d) { return tempY(d.apparentTemp) })
+            .y1(function(d) { return tempY(d.airTemp) });
 
     var svg = d3.select(".chart").append("svg")
             .attr("width", width + margin.left + margin.right)
@@ -330,7 +344,7 @@
                 })
             ]);
 
-            leftY.domain([
+            tempY.domain([
                 d3.min(sites, function (c) {
                     return d3.min(c.values, function (v) {
                         return d3.min([v.airTemp, v.apparentTemp]);
@@ -343,7 +357,7 @@
                 })
             ]);
 
-            rightY.domain([
+            rainY.domain([
                 0,
                 d3.max(rainTracePerSite, function (c) {
                     return d3.max(c.values, function (v) { return v.rain; });
@@ -356,8 +370,8 @@
                     .call(xAxis);
 
             svg.append("g")
-                    .attr("class", "leftY axis")
-                    .call(leftYAxis)
+                    .attr("class", "tempY axis")
+                    .call(leftTemperatureYAxis)
                     .append("text")
                     .attr("transform", "rotate(-90)")
                     .attr("y", -25)
@@ -365,12 +379,22 @@
                     .html("Temperature (&deg;C)");
 
             svg.append("g")
+                    .attr("class", "humidityY axis")
+                    .call(leftHumidityYAxis)
+                    .append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", -35)
+                    .attr("x", -400)
+                    .style("text-anchor", "end")
+                    .html("Humidity (%)");
+
+            svg.append("g")
                     .attr("class", "rightY axis")
                     .attr("transform", "translate(" + width + ",0)")
                     .call(rightYAxis)
                     .append("text")
                     .attr("transform", "rotate(-90)")
-                    .attr("y", 25)
+                    .attr("y", 50)
                     .attr("x", -400)
                     .style("text-anchor", "end")
                     .html("Rain since 9am (mm)");
@@ -394,7 +418,7 @@
             site.append("path")
                     .attr("class", "line")
                     .attr("d", function (d) {
-                        return line(d.values);
+                        return tempLine(d.values);
                     })
                     .style("stroke", function (d) {
                         return color(d.name);
@@ -410,12 +434,22 @@
                     })
                     .attr("d", tempArea);
 
+
+            site.append("path")
+                    .attr("class", "line")
+                    .attr("d", function (d) {
+                        return humidityLine(d.values);
+                    })
+                    .style("stroke", function (d) {
+                        return color(d.name);
+                    });
+
             site.append("text")
                     .datum(function (d) {
                         return {name: d.name, value: d.values[d.values.length - 1]};
                     })
                     .attr("transform", function (d) {
-                        return "translate(" + x(d.value.date) + "," + leftY(d.value.airTemp) + ")";
+                        return "translate(" + x(d.value.date) + "," + tempY(d.value.airTemp) + ")";
                     })
                     .attr("x", 3)
                     .attr("dy", ".35em")
@@ -456,15 +490,15 @@
 
             buckets.append("rect")
                     .attr("x", function(d) { return x(d.start) })
-                    .attr("y", function(d) { return rightY(d.rain) })
+                    .attr("y", function(d) { return rainY(d.rain) })
                     .attr("width", function(d) { return x(d.end) - x(d.start) })
-                    .attr("height", function(d) { return height - rightY(d.rain) });
+                    .attr("height", function(d) { return height - rainY(d.rain) });
 
             buckets.append("line")
                     .attr("x1", function(d) {return x(d.start)})
                     .attr("x2", function(d) {return x(d.end)})
-                    .attr("y1", function(d) {return rightY(d.rain)})
-                    .attr("y2", function(d) {return rightY(d.rain)});
+                    .attr("y1", function(d) {return rainY(d.rain)})
+                    .attr("y2", function(d) {return rainY(d.rain)});
 
             var mostRecent = sites.map(function (site) {
                 return site.values[0].observation
