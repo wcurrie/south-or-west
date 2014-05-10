@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -124,6 +124,7 @@ showToolTip = function(now, observations) {
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
+  showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h");
   return showTimeAtTopOfMouseLine(now);
 };
 
@@ -148,19 +149,23 @@ margin = {
 
 width = 960 - margin.left - margin.right;
 
-height = 550 - margin.top - margin.bottom;
+height = 650 - margin.top - margin.bottom;
 
 rainHeight = 100;
 
-airHeight = height - rainHeight;
+windHeight = 100;
+
+airHeight = height - rainHeight - windHeight;
 
 x = d3.time.scale().range([0, width]).clamp(true);
 
 tempY = d3.scale.linear().range([airHeight, 0]);
 
-rainY = d3.scale.linear().range([height, airHeight]).clamp(true);
+rainY = d3.scale.linear().range([height, height - rainHeight]).clamp(true);
 
-humidityY = d3.scale.linear().range([height, airHeight]).domain([0, 100]).clamp(true);
+windY = d3.scale.linear().range([height - rainHeight, airHeight]).clamp(true);
+
+humidityY = d3.scale.linear().range([height, height - rainHeight]).domain([0, 100]).clamp(true);
 
 color = d3.scale.category10();
 
@@ -170,7 +175,9 @@ leftTemperatureYAxis = d3.svg.axis().scale(tempY).orient("left");
 
 leftHumidityYAxis = d3.svg.axis().scale(humidityY).orient("left");
 
-rightYAxis = d3.svg.axis().scale(rainY).orient("right");
+rainYAxis = d3.svg.axis().scale(rainY).orient("right");
+
+windYAxis = d3.svg.axis().scale(windY).orient("right");
 
 tempLine = d3.svg.line().interpolate("basis").x(function(d) {
   return x(d.date);
@@ -182,6 +189,12 @@ dewPointLine = d3.svg.line().interpolate("basis").x(function(d) {
   return x(d.date);
 }).y(function(d) {
   return tempY(d.observation.dewpt);
+});
+
+windLine = d3.svg.line().interpolate("basis").x(function(d) {
+  return x(d.date);
+}).y(function(d) {
+  return windY(d.observation.wind_spd_kmh);
 });
 
 humidityLine = d3.svg.line().interpolate("basis").x(function(d) {
@@ -242,10 +255,18 @@ plot = function(data) {
       });
     })
   ]);
+  windY.domain([
+    0, d3.max(sites, function(site) {
+      return d3.max(site.values, function(v) {
+        return v.observation.wind_spd_kmh;
+      });
+    })
+  ]);
   svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
   svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -25).style("text-anchor", "end").html("Temperature (&deg;C)");
-  svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -400).style("text-anchor", "end").html("Humidity (%)");
-  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rightYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -400).style("text-anchor", "end").html("Rain since 9am (mm)");
+  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -400).style("text-anchor", "end").html("Wind (km/h)");
+  svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -500).style("text-anchor", "end").html("Humidity (%)");
+  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -500).style("text-anchor", "end").html("Rain since 9am (mm)");
   svg.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
     return x(d.start);
   }).attr("width", function(d) {
@@ -258,11 +279,14 @@ plot = function(data) {
   site.append("path").attr("class", "area").style("fill", colorByName).datum(function(d) {
     return d.values;
   }).attr("d", tempArea);
-  site.append("path").attr("class", "line").attr("d", function(d) {
-    return humidityLine(d.values);
-  }).style("stroke", colorByName);
   site.append("path").attr("class", "dewPointLine").attr("d", function(d) {
     return dewPointLine(d.values);
+  }).style("stroke", colorByName);
+  site.append("path").attr("class", "line").attr("d", function(d) {
+    return windLine(d.values);
+  }).style("stroke", colorByName);
+  site.append("path").attr("class", "line").attr("d", function(d) {
+    return humidityLine(d.values);
   }).style("stroke", colorByName);
   site.append("text").datum(function(d) {
     return {
@@ -328,7 +352,7 @@ loadThenPlot = function() {
   });
 };
 
-verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", "500px").style("top", "30px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
+verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", height + "px").style("top", "32px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
 
 d3.select(".chart").on("mousemove", function() {
   var mouseX, observed, time, translatedMouseX;

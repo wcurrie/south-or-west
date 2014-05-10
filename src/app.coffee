@@ -105,6 +105,7 @@ showToolTip = (now, observations) ->
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%")
+  showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h")
   showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move
@@ -114,9 +115,10 @@ load = () ->
 
 margin = {top: 20, right: 80, bottom: 30, left: 50}
 width = 960 - margin.left - margin.right
-height = 550 - margin.top - margin.bottom
+height = 650 - margin.top - margin.bottom
 rainHeight = 100
-airHeight = height - rainHeight
+windHeight = 100
+airHeight = height - rainHeight - windHeight
 
 x = d3.time.scale()
   .range([0, width])
@@ -126,11 +128,15 @@ tempY = d3.scale.linear()
   .range([airHeight, 0])
 
 rainY = d3.scale.linear()
-  .range([height, airHeight])
+  .range([height, height - rainHeight])
+  .clamp(true)
+
+windY = d3.scale.linear()
+  .range([height - rainHeight, airHeight])
   .clamp(true)
 
 humidityY = d3.scale.linear()
-  .range([height, airHeight])
+  .range([height, height - rainHeight])
   .domain([0, 100])
   .clamp(true)
 
@@ -148,8 +154,12 @@ leftHumidityYAxis = d3.svg.axis()
   .scale(humidityY)
   .orient("left")
 
-rightYAxis = d3.svg.axis()
+rainYAxis = d3.svg.axis()
   .scale(rainY)
+  .orient("right")
+
+windYAxis = d3.svg.axis()
+  .scale(windY)
   .orient("right")
 
 tempLine = d3.svg.line()
@@ -161,6 +171,11 @@ dewPointLine = d3.svg.line()
   .interpolate("basis")
   .x((d) -> x(d.date))
   .y((d) -> tempY(d.observation.dewpt));
+
+windLine = d3.svg.line()
+  .interpolate("basis")
+  .x((d) -> x(d.date))
+  .y((d) -> windY(d.observation.wind_spd_kmh));
 
 humidityLine = d3.svg.line()
   .interpolate("basis")
@@ -205,6 +220,11 @@ plot = (data) ->
     d3.max(rainTracePerSite, (site) -> d3.max(site.values, (v) -> v.rain))
   ])
 
+  windY.domain([
+    0,
+    d3.max(sites, (site) -> d3.max(site.values, (v) -> v.observation.wind_spd_kmh))
+  ])
+
   svg.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + height + ")")
@@ -220,23 +240,34 @@ plot = (data) ->
     .html("Temperature (&deg;C)")
 
   svg.append("g")
+    .attr("class", "rightY axis")
+    .attr("transform", "translate(" + width + ",0)")
+    .call(windYAxis)
+    .append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 50)
+    .attr("x", -400)
+    .style("text-anchor", "end")
+    .html("Wind (km/h)")
+
+  svg.append("g")
     .attr("class", "humidityY axis")
     .call(leftHumidityYAxis)
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", -35)
-    .attr("x", -400)
+    .attr("x", -500)
     .style("text-anchor", "end")
     .html("Humidity (%)")
 
   svg.append("g")
     .attr("class", "rightY axis")
     .attr("transform", "translate(" + width + ",0)")
-    .call(rightYAxis)
+    .call(rainYAxis)
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", 50)
-    .attr("x", -400)
+    .attr("x", -500)
     .style("text-anchor", "end")
     .html("Rain since 9am (mm)")
 
@@ -268,13 +299,18 @@ plot = (data) ->
     .attr("d", tempArea)
 
   site.append("path")
-    .attr("class", "line")
-    .attr("d", (d) -> humidityLine(d.values))
+    .attr("class", "dewPointLine")
+    .attr("d", (d) -> dewPointLine(d.values))
     .style("stroke", colorByName)
 
   site.append("path")
-    .attr("class", "dewPointLine")
-    .attr("d", (d) -> dewPointLine(d.values))
+    .attr("class", "line")
+    .attr("d", (d) -> windLine(d.values))
+    .style("stroke", colorByName)
+
+  site.append("path")
+    .attr("class", "line")
+    .attr("d", (d) -> humidityLine(d.values))
     .style("stroke", colorByName)
 
   site.append("text")
@@ -345,8 +381,8 @@ verticalMouseLine = d3.select(".chart")
   .style("position", "absolute")
   .style("z-index", "19")
   .style("width", "1px")
-  .style("height", "500px")
-  .style("top", "30px")
+  .style("height", height + "px")
+  .style("top", "32px")
   .style("bottom", "30px")
   .style("left", "0px")
   .style("background", "#000")
