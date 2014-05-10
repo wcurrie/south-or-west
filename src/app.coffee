@@ -61,6 +61,20 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
     .attr("r", "2")
   airDots.exit().remove()
 
+showTimeAtTopOfMouseLine = (now) ->
+  mouseTip = d3.select(".plotBox")
+    .selectAll("text.mousedTime")
+    .data([now], () -> 1)
+  mouseTip
+    .attr("x", x(now))
+    .attr("y", 0)
+    .text(tooltipDateFormat(now))
+  mouseTip.enter()
+    .append("text")
+    .attr("class", "mousedTime mouseTip")
+    .attr("dy", -2)
+    .attr("dx", 2)
+
 tooltipDateFormat = d3.time.format("%d %B %H:%M")
 
 showToolTip = (now, observations) ->
@@ -91,6 +105,7 @@ showToolTip = (now, observations) ->
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%")
+  showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move
 load = () ->
@@ -182,7 +197,7 @@ plot = (data) ->
 
   tempY.domain([
     d3.min(sites, (site) -> d3.min(site.values, (v) -> d3.min([v.airTemp, v.apparentTemp]))),
-    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp])))
+    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp]))) + 1
   ])
 
   rainY.domain([

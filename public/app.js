@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, saveStations, showStationList, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
 
 stations = [
   {
@@ -77,6 +77,15 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   return airDots.exit().remove();
 };
 
+showTimeAtTopOfMouseLine = function(now) {
+  var mouseTip;
+  mouseTip = d3.select(".plotBox").selectAll("text.mousedTime").data([now], function() {
+    return 1;
+  });
+  mouseTip.attr("x", x(now)).attr("y", 0).text(tooltipDateFormat(now));
+  return mouseTip.enter().append("text").attr("class", "mousedTime mouseTip").attr("dy", -2).attr("dx", 2);
+};
+
 tooltipDateFormat = d3.time.format("%d %B %H:%M");
 
 showToolTip = function(now, observations) {
@@ -110,7 +119,8 @@ showToolTip = function(now, observations) {
   });
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
-  return showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
+  showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
+  return showTimeAtTopOfMouseLine(now);
 };
 
 sites = void 0;
@@ -219,7 +229,7 @@ plot = function(data) {
       return d3.max(site.values, function(v) {
         return d3.max([v.airTemp, v.apparentTemp]);
       });
-    })
+    }) + 1
   ]);
   rainY.domain([
     0, d3.max(rainTracePerSite, function(site) {
