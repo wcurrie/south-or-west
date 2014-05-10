@@ -30,6 +30,14 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
   joinByName = (d) -> d.name
   xPos = x(now)
   yPos = (d) -> yScale.call(null, d[attr])
+  yValues = []
+
+  debounced = observations.filter((d) ->
+    newY = yPos(d)
+    collision = yValues.filter((y) -> Math.abs(y - newY) < 6).length > 0
+    yValues.push(newY) unless collision
+    !collision
+  )
 
   tipClassName = "tip-" + attr
   dotClassName = "dot" + attr
@@ -37,7 +45,7 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
 
   airTips = plotBox
     .selectAll("text." + tipClassName)
-    .data(observations, joinByName)
+    .data(debounced, joinByName)
   airTips
     .attr("x", xPos)
     .attr("y", yPos)
@@ -51,7 +59,7 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
 
   airDots = plotBox
     .selectAll("." + dotClassName)
-    .data(observations, joinByName)
+    .data(debounced, joinByName)
   airDots
     .attr("cx", xPos)
     .attr("cy", yPos)
@@ -106,6 +114,8 @@ showToolTip = (now, observations) ->
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%")
   showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h")
+  showValueAtMouselineIntersection(now, observations, "gust_kmh", windY, "km/h")
+  showValueAtMouselineIntersection(now, observations, "dewpt", tempY, "\u00B0")
   showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move
@@ -194,6 +204,11 @@ tempArea = d3.svg.area()
   .y0((d) -> tempY(d.apparentTemp))
   .y1((d) -> tempY(d.airTemp))
 
+windArea = d3.svg.area()
+  .x((d) -> x(d.date))
+  .y0((d) -> windY(d.observation.wind_spd_kmh))
+  .y1((d) -> windY(d.observation.gust_kmh))
+
 svg = d3.select(".chart").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", plotBoxHeight + margin.top + margin.bottom)
@@ -218,8 +233,8 @@ plot = (data) ->
   ])
 
   tempY.domain([
-    d3.min(sites, (site) -> d3.min(site.values, (v) -> d3.min([v.airTemp, v.apparentTemp,v.observation.dewpt]))),
-    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp,v.observation.dewpt]))) + 1
+    d3.min(sites, (site) -> d3.min(site.values, (v) -> d3.min([v.airTemp, v.apparentTemp, v.observation.dewpt]))),
+    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp, v.observation.dewpt]))) + 1
   ])
 
   rainY.domain([
@@ -229,7 +244,7 @@ plot = (data) ->
 
   windY.domain([
     0,
-    d3.max(sites, (site) -> d3.max(site.values, (v) -> v.observation.wind_spd_kmh))
+    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.observation.wind_spd_kmh, v.observation.gust_kmh])))
   ])
 
   svg.append("g")
@@ -314,6 +329,12 @@ plot = (data) ->
     .attr("class", "line")
     .attr("d", (d) -> windLine(d.values))
     .style("stroke", colorByName)
+
+  site.append("path")
+    .attr("class", "area windGust")
+    .style("fill", colorByName)
+    .datum((d) -> d.values)
+    .attr("d", windArea)
 
   site.append("path")
     .attr("class", "line")

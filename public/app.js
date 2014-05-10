@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -52,7 +52,7 @@ findObservationFor = function(site, date) {
 };
 
 showValueAtMouselineIntersection = function(now, observations, attr, yScale, suffix) {
-  var airDots, airTips, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos;
+  var airDots, airTips, debounced, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos, yValues;
   joinByName = function(d) {
     return d.name;
   };
@@ -60,10 +60,22 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   yPos = function(d) {
     return yScale.call(null, d[attr]);
   };
+  yValues = [];
+  debounced = observations.filter(function(d) {
+    var collision, newY;
+    newY = yPos(d);
+    collision = yValues.filter(function(y) {
+      return Math.abs(y - newY) < 6;
+    }).length > 0;
+    if (!collision) {
+      yValues.push(newY);
+    }
+    return !collision;
+  });
   tipClassName = "tip-" + attr;
   dotClassName = "dot" + attr;
   plotBox = d3.select(".plotBox");
-  airTips = plotBox.selectAll("text." + tipClassName).data(observations, joinByName);
+  airTips = plotBox.selectAll("text." + tipClassName).data(debounced, joinByName);
   airTips.attr("x", xPos).attr("y", yPos).attr("dx", function() {
     if (xPos < x.range()[1] - 25) {
       return 2;
@@ -75,7 +87,7 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   });
   airTips.enter().append("text").attr("class", tipClassName + " mouseTip").attr("dy", -2);
   airTips.exit().remove();
-  airDots = plotBox.selectAll("." + dotClassName).data(observations, joinByName);
+  airDots = plotBox.selectAll("." + dotClassName).data(debounced, joinByName);
   airDots.attr("cx", xPos).attr("cy", yPos);
   airDots.enter().append("circle").attr("class", dotClassName + " mouseTip").attr("r", "2");
   return airDots.exit().remove();
@@ -125,6 +137,8 @@ showToolTip = function(now, observations) {
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
   showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h");
+  showValueAtMouselineIntersection(now, observations, "gust_kmh", windY, "km/h");
+  showValueAtMouselineIntersection(now, observations, "dewpt", tempY, "\u00B0");
   return showTimeAtTopOfMouseLine(now);
 };
 
@@ -214,6 +228,14 @@ tempArea = d3.svg.area().x(function(d) {
   return tempY(d.airTemp);
 });
 
+windArea = d3.svg.area().x(function(d) {
+  return x(d.date);
+}).y0(function(d) {
+  return windY(d.observation.wind_spd_kmh);
+}).y1(function(d) {
+  return windY(d.observation.gust_kmh);
+});
+
 svg = d3.select(".chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", plotBoxHeight + margin.top + margin.bottom).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 plot = function(data) {
@@ -261,7 +283,7 @@ plot = function(data) {
   windY.domain([
     0, d3.max(sites, function(site) {
       return d3.max(site.values, function(v) {
-        return v.observation.wind_spd_kmh;
+        return d3.max([v.observation.wind_spd_kmh, v.observation.gust_kmh]);
       });
     })
   ]);
@@ -288,6 +310,9 @@ plot = function(data) {
   site.append("path").attr("class", "line").attr("d", function(d) {
     return windLine(d.values);
   }).style("stroke", colorByName);
+  site.append("path").attr("class", "area windGust").style("fill", colorByName).datum(function(d) {
+    return d.values;
+  }).attr("d", windArea);
   site.append("path").attr("class", "line").attr("d", function(d) {
     return humidityLine(d.values);
   }).style("stroke", colorByName);
