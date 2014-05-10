@@ -113,12 +113,12 @@ load = () ->
   urls = stations.filter((s) -> s.load).map((s) -> "/fwo/" + s.url + ".json")
   Promise.all(urls.map(loadJson))
 
-margin = {top: 20, right: 80, bottom: 30, left: 50}
+margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 10}
 width = 960 - margin.left - margin.right
-height = 650 - margin.top - margin.bottom
+plotBoxHeight = 650 + margin.graphGap*2
+airHeight = 450
 rainHeight = 100
 windHeight = 100
-airHeight = height - rainHeight - windHeight
 
 x = d3.time.scale()
   .range([0, width])
@@ -127,16 +127,18 @@ x = d3.time.scale()
 tempY = d3.scale.linear()
   .range([airHeight, 0])
 
-rainY = d3.scale.linear()
-  .range([height, height - rainHeight])
+windY = d3.scale.linear()
+  .range([airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap])
   .clamp(true)
 
-windY = d3.scale.linear()
-  .range([height - rainHeight, airHeight])
+rainAndHumidityRange = [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap]
+
+rainY = d3.scale.linear()
+  .range(rainAndHumidityRange)
   .clamp(true)
 
 humidityY = d3.scale.linear()
-  .range([height, height - rainHeight])
+  .range(rainAndHumidityRange)
   .domain([0, 100])
   .clamp(true)
 
@@ -189,7 +191,7 @@ tempArea = d3.svg.area()
 
 svg = d3.select(".chart").append("svg")
   .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
+  .attr("height", plotBoxHeight + margin.top + margin.bottom)
   .append("g")
   .attr("class", "plotBox")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
@@ -227,7 +229,7 @@ plot = (data) ->
 
   svg.append("g")
     .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
+    .attr("transform", "translate(0," + plotBoxHeight + ")")
     .call(xAxis)
 
   svg.append("g")
@@ -279,7 +281,7 @@ plot = (data) ->
     .attr("x", (d) -> x(d.start))
     .attr("width", (d) -> x(d.end) - x(d.start))
     .attr("y", 0)
-    .attr("height", height)
+    .attr("height", plotBoxHeight)
     .attr("class", "night")
 
   site = svg.selectAll(".site")
@@ -356,7 +358,7 @@ plot = (data) ->
     .attr("x", (d) -> x(d.start))
     .attr("y", (d) -> rainY(d.rain))
     .attr("width", (d) -> x(d.end) - x(d.start))
-    .attr("height", (d) -> height - rainY(d.rain))
+    .attr("height", (d) -> rainY.range()[0] - rainY(d.rain))
 
   buckets.append("line")
     .attr("x1", (d) -> x(d.start))
@@ -381,7 +383,7 @@ verticalMouseLine = d3.select(".chart")
   .style("position", "absolute")
   .style("z-index", "19")
   .style("width", "1px")
-  .style("height", height + "px")
+  .style("height", plotBoxHeight + "px")
   .style("top", "32px")
   .style("bottom", "30px")
   .style("left", "0px")

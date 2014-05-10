@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, rainAndHumidityRange, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -144,28 +144,31 @@ margin = {
   top: 20,
   right: 80,
   bottom: 30,
-  left: 50
+  left: 50,
+  graphGap: 10
 };
 
 width = 960 - margin.left - margin.right;
 
-height = 650 - margin.top - margin.bottom;
+plotBoxHeight = 650 + margin.graphGap * 2;
+
+airHeight = 450;
 
 rainHeight = 100;
 
 windHeight = 100;
 
-airHeight = height - rainHeight - windHeight;
-
 x = d3.time.scale().range([0, width]).clamp(true);
 
 tempY = d3.scale.linear().range([airHeight, 0]);
 
-rainY = d3.scale.linear().range([height, height - rainHeight]).clamp(true);
+windY = d3.scale.linear().range([airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap]).clamp(true);
 
-windY = d3.scale.linear().range([height - rainHeight, airHeight]).clamp(true);
+rainAndHumidityRange = [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap];
 
-humidityY = d3.scale.linear().range([height, height - rainHeight]).domain([0, 100]).clamp(true);
+rainY = d3.scale.linear().range(rainAndHumidityRange).clamp(true);
+
+humidityY = d3.scale.linear().range(rainAndHumidityRange).domain([0, 100]).clamp(true);
 
 color = d3.scale.category10();
 
@@ -211,7 +214,7 @@ tempArea = d3.svg.area().x(function(d) {
   return tempY(d.airTemp);
 });
 
-svg = d3.select(".chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", height + margin.top + margin.bottom).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+svg = d3.select(".chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", plotBoxHeight + margin.top + margin.bottom).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 plot = function(data) {
   var buckets, colorByName, mostRecent, nights, rainTracePerSite, rainTraces, site;
@@ -262,7 +265,7 @@ plot = function(data) {
       });
     })
   ]);
-  svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+  svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + plotBoxHeight + ")").call(xAxis);
   svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -25).style("text-anchor", "end").html("Temperature (&deg;C)");
   svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -400).style("text-anchor", "end").html("Wind (km/h)");
   svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -500).style("text-anchor", "end").html("Humidity (%)");
@@ -271,7 +274,7 @@ plot = function(data) {
     return x(d.start);
   }).attr("width", function(d) {
     return x(d.end) - x(d.start);
-  }).attr("y", 0).attr("height", height).attr("class", "night");
+  }).attr("y", 0).attr("height", plotBoxHeight).attr("class", "night");
   site = svg.selectAll(".site").data(sites).enter().append("g").attr("class", "site");
   site.append("path").attr("class", "line").attr("d", function(d) {
     return tempLine(d.values);
@@ -327,7 +330,7 @@ plot = function(data) {
   }).attr("width", function(d) {
     return x(d.end) - x(d.start);
   }).attr("height", function(d) {
-    return height - rainY(d.rain);
+    return rainY.range()[0] - rainY(d.rain);
   });
   buckets.append("line").attr("x1", function(d) {
     return x(d.start);
@@ -352,7 +355,7 @@ loadThenPlot = function() {
   });
 };
 
-verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", height + "px").style("top", "32px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
+verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", plotBoxHeight + "px").style("top", "32px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
 
 d3.select(".chart").on("mousemove", function() {
   var mouseX, observed, time, translatedMouseX;

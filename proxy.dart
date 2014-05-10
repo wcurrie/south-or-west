@@ -46,7 +46,7 @@ void main() {
         serveFile("favicon.ico", request, "image/vnd.microsoft.icon");
       } else if (file.startsWith("/fwo")) {
         if (LOCAL_MODE) {
-          serveFile(request.uri.pathSegments.last, request, "application/json");
+          serveFile("10-may/" + request.uri.pathSegments.last, request, "application/json");
         } else {
           print("proxying " + request.uri.toString());
           makeProxyRequest(request);
