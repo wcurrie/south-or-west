@@ -3,7 +3,8 @@ stations = [
   {name: "Nowra", url: "IDN60801/IDN60801.94750", load: true},
   {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: true},
   {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
-  {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false}
+  {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false},
+  {name: "Canberra", url: "IDN60903/IDN60903.94926", load: false}
 ]
 
 loadJson = (url) ->

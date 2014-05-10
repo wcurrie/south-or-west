@@ -17,6 +17,10 @@ stations = [
     name: "Horsham",
     url: "IDV60801/IDV60801.95839",
     load: false
+  }, {
+    name: "Canberra",
+    url: "IDN60903/IDN60903.94926",
+    load: false
   }
 ];
 
