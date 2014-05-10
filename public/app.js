@@ -56,9 +56,7 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   joinByName = function(d) {
     return d.name;
   };
-  xPos = function() {
-    return x(now);
-  };
+  xPos = x(now);
   yPos = function(d) {
     return yScale.call(null, d[attr]);
   };
@@ -66,10 +64,16 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   dotClassName = "dot" + attr;
   plotBox = d3.select(".plotBox");
   airTips = plotBox.selectAll("text." + tipClassName).data(observations, joinByName);
-  airTips.attr("x", xPos).attr("y", yPos).text(function(d) {
+  airTips.attr("x", xPos).attr("y", yPos).attr("dx", function() {
+    if (xPos < x.range()[1] - 25) {
+      return 2;
+    } else {
+      return -20;
+    }
+  }).text(function(d) {
     return d[attr] + suffix;
   });
-  airTips.enter().append("text").attr("class", tipClassName + " mouseTip").attr("dy", -2).attr("dx", 2);
+  airTips.enter().append("text").attr("class", tipClassName + " mouseTip").attr("dy", -2);
   airTips.exit().remove();
   airDots = plotBox.selectAll("." + dotClassName).data(observations, joinByName);
   airDots.attr("cx", xPos).attr("cy", yPos);
@@ -311,7 +315,7 @@ plot = function(data) {
     return rainY(d.rain);
   });
   mostRecent = sites.map(function(site) {
-    return site.values[0].observation;
+    return site.values[site.values.length - 1].observation;
   });
   showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
   return d3.selectAll(".tooltip,.explanation").style("visibility", "");
@@ -327,11 +331,12 @@ loadThenPlot = function() {
 verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", "500px").style("top", "30px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
 
 d3.select(".chart").on("mousemove", function() {
-  var mouseX, observed, time;
-  if (sites) {
-    mouseX = d3.mouse(this)[0];
+  var mouseX, observed, time, translatedMouseX;
+  mouseX = d3.mouse(this)[0];
+  translatedMouseX = mouseX - margin.left;
+  if (sites && translatedMouseX > 0 && translatedMouseX < width) {
     verticalMouseLine.style("left", (mouseX + 7) + "px");
-    time = x.invert(mouseX - margin.left);
+    time = x.invert(translatedMouseX);
     observed = sites.map(function(site) {
       return findObservationFor(site, time);
     });

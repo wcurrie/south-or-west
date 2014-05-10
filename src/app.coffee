@@ -28,7 +28,7 @@ findObservationFor = (site, date) ->
 
 showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
   joinByName = (d) -> d.name
-  xPos = () -> x(now)
+  xPos = x(now)
   yPos = (d) -> yScale.call(null, d[attr])
 
   tipClassName = "tip-" + attr
@@ -41,12 +41,12 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
   airTips
     .attr("x", xPos)
     .attr("y", yPos)
+    .attr("dx", () -> if xPos < x.range()[1] - 25 then 2 else -20)
     .text((d) -> d[attr] + suffix)
   airTips.enter()
     .append("text")
     .attr("class", tipClassName + " mouseTip")
     .attr("dy", -2)
-    .attr("dx", 2)
   airTips.exit().remove()
 
   airDots = plotBox
@@ -328,7 +328,7 @@ plot = (data) ->
     .attr("y1", (d) -> rainY(d.rain))
     .attr("y2", (d) -> rainY(d.rain))
 
-  mostRecent = sites.map((site) -> site.values[0].observation)
+  mostRecent = sites.map((site) -> site.values[site.values.length-1].observation)
   showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent)
 
   d3.selectAll(".tooltip,.explanation").style("visibility", "")
@@ -354,10 +354,11 @@ verticalMouseLine = d3.select(".chart")
 
 d3.select(".chart")
   .on("mousemove", () ->
-    if (sites)
-      mouseX = d3.mouse(this)[0]
+    mouseX = d3.mouse(this)[0]
+    translatedMouseX = mouseX - margin.left
+    if sites and translatedMouseX > 0 and translatedMouseX < width
       verticalMouseLine.style("left", (mouseX + 7) + "px")
-      time = x.invert(mouseX - margin.left)
+      time = x.invert(translatedMouseX)
       observed = sites.map((site) -> findObservationFor(site, time))
       showToolTip(time, observed)
   ).on("mouseover", () ->
