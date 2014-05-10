@@ -211,8 +211,8 @@ plot = (data) ->
   ])
 
   tempY.domain([
-    d3.min(sites, (site) -> d3.min(site.values, (v) -> d3.min([v.airTemp, v.apparentTemp]))),
-    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp]))) + 1
+    d3.min(sites, (site) -> d3.min(site.values, (v) -> d3.min([v.airTemp, v.apparentTemp,v.observation.dewpt]))),
+    d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.airTemp, v.apparentTemp,v.observation.dewpt]))) + 1
   ])
 
   rainY.domain([
@@ -367,7 +367,7 @@ plot = (data) ->
   mostRecent = sites.map((site) -> site.values[site.values.length-1].observation)
   showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent)
 
-  d3.selectAll(".tooltip,.explanation").style("visibility", "")
+  d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "")
 
 loadThenPlot = () ->
   load().then(plot).catch((error) ->

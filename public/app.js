@@ -240,11 +240,11 @@ plot = function(data) {
   tempY.domain([
     d3.min(sites, function(site) {
       return d3.min(site.values, function(v) {
-        return d3.min([v.airTemp, v.apparentTemp]);
+        return d3.min([v.airTemp, v.apparentTemp, v.observation.dewpt]);
       });
     }), d3.max(sites, function(site) {
       return d3.max(site.values, function(v) {
-        return d3.max([v.airTemp, v.apparentTemp]);
+        return d3.max([v.airTemp, v.apparentTemp, v.observation.dewpt]);
       });
     }) + 1
   ]);
@@ -342,7 +342,7 @@ plot = function(data) {
     return site.values[site.values.length - 1].observation;
   });
   showToolTip(parseDate(mostRecent[0].local_date_time_full), mostRecent);
-  return d3.selectAll(".tooltip,.explanation").style("visibility", "");
+  return d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "");
 };
 
 loadThenPlot = function() {
