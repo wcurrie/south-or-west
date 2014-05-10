@@ -147,6 +147,11 @@ tempLine = d3.svg.line()
   .x((d) -> x(d.date))
   .y((d) -> tempY(d.airTemp));
 
+dewPointLine = d3.svg.line()
+  .interpolate("basis")
+  .x((d) -> x(d.date))
+  .y((d) -> tempY(d.observation.dewpt));
+
 humidityLine = d3.svg.line()
   .interpolate("basis")
   .x((d) -> x(d.date))
@@ -257,12 +262,26 @@ plot = (data) ->
     .attr("d", (d) -> humidityLine(d.values))
     .style("stroke", colorByName)
 
+  site.append("path")
+    .attr("class", "dewPointLine")
+    .attr("d", (d) -> dewPointLine(d.values))
+    .style("stroke", colorByName)
+
   site.append("text")
     .datum((d) -> {name: d.name, value: d.values[d.values.length - 1]})
     .attr("transform", (d) -> "translate(" + x(d.value.date) + "," + tempY(d.value.airTemp) + ")")
     .attr("x", 3)
     .attr("dy", ".35em")
     .text((d) -> d.name)
+
+  site.append("text")
+    .datum((d) -> {name: d.name, value: d.values[d.values.length - 1]})
+    .attr("transform", (d) -> "translate(" + x(d.value.date) + "," + tempY(d.value.observation.dewpt) + ")")
+    .attr("x", 3)
+    .attr("dy", ".35em")
+    .text("Dew Point")
+    .attr("class", "mouseTip")
+    .style("opacity", 0)
 
   svg.selectAll(".site")
     .attr("opacity", 1)

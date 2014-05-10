@@ -1,4 +1,4 @@
-var airHeight, color, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, lis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, lis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
 
 stations = [
   {
@@ -169,6 +169,12 @@ tempLine = d3.svg.line().interpolate("basis").x(function(d) {
   return tempY(d.airTemp);
 });
 
+dewPointLine = d3.svg.line().interpolate("basis").x(function(d) {
+  return x(d.date);
+}).y(function(d) {
+  return tempY(d.observation.dewpt);
+});
+
 humidityLine = d3.svg.line().interpolate("basis").x(function(d) {
   return x(d.date);
 }).y(function(d) {
@@ -246,6 +252,9 @@ plot = function(data) {
   site.append("path").attr("class", "line").attr("d", function(d) {
     return humidityLine(d.values);
   }).style("stroke", colorByName);
+  site.append("path").attr("class", "dewPointLine").attr("d", function(d) {
+    return dewPointLine(d.values);
+  }).style("stroke", colorByName);
   site.append("text").datum(function(d) {
     return {
       name: d.name,
@@ -256,6 +265,14 @@ plot = function(data) {
   }).attr("x", 3).attr("dy", ".35em").text(function(d) {
     return d.name;
   });
+  site.append("text").datum(function(d) {
+    return {
+      name: d.name,
+      value: d.values[d.values.length - 1]
+    };
+  }).attr("transform", function(d) {
+    return "translate(" + x(d.value.date) + "," + tempY(d.value.observation.dewpt) + ")";
+  }).attr("x", 3).attr("dy", ".35em").text("Dew Point").attr("class", "mouseTip").style("opacity", 0);
   svg.selectAll(".site").attr("opacity", 1).on("mouseover", function(d, i) {
     return svg.selectAll(".site").transition().duration(250).attr("opacity", function(d, j) {
       var _ref;
