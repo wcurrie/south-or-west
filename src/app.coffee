@@ -1,7 +1,7 @@
 
 stations = [
-  {name: "Nowra", url: "IDN60801/IDN60801.94750", load: true},
-  {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: true},
+  {name: "Nowra", url: "IDN60801/IDN60801.94750", load: false},
+  {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: false},
   {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
   {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false},
   {name: "Canberra", url: "IDN60903/IDN60903.94926", load: false}
@@ -91,12 +91,6 @@ showToolTip = (now, observations) ->
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%")
-
-
-toggleStation = (name) ->
-  station = stations.filter((s) -> s.name == name)[0]
-  station.load = !station.load
-  loadThenPlot()
 
 sites = undefined  # for mouse move
 load = () ->
@@ -358,24 +352,37 @@ d3.select(".chart")
     d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0)
   )
 
-lis = d3.select("#source-list")
-  .selectAll("li")
-  .data(stations)
-  .enter()
-  .append("li")
-lis.append("input")
-  .attr("type", "checkbox")
-  .attr("onclick", (d) -> "toggleStation('" + d.name + "')")
-  .attr("id", (d) -> "show-" + d.name)
-lis.append("a")
-  .attr("href", (d) -> "http://www.bom.gov.au/products/" + d.url + ".shtml")
-  .text((d) -> d.name)
-stations.forEach((s) ->
-  if (s.load)
-    document.getElementById("show-" + s.name).checked = true
-)
+showStationList = () ->
+  lis = d3.select("#source-list")
+    .selectAll("li")
+    .data(stations)
+    .enter()
+    .append("li")
+  lis.append("input")
+    .attr("type", "checkbox")
+    .attr("onclick", (d) -> "toggleStation('" + d.name + "')")
+    .attr("id", (d) -> "show-" + d.name)
+  lis.append("a")
+    .attr("href", (d) -> "http://www.bom.gov.au/products/" + d.url + ".shtml")
+    .text((d) -> d.name)
+  if localStorage
+    savedStations = localStorage.getItem("stations")
+    for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
+      stations.filter((d) -> d.name == s)[0].load = true
+      document.getElementById("show-" + s).checked = true
 
-loadThenPlot();
+saveStations = () ->
+  if localStorage
+    localStorage.setItem("stations", JSON.stringify(stations.filter((d) -> d.load).map((d) -> d.name)))
+
+toggleStation = (name) ->
+  station = stations.filter((s) -> s.name == name)[0]
+  station.load = !station.load
+  saveStations()
+  loadThenPlot()
+
+showStationList()
+loadThenPlot()
 
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse
 

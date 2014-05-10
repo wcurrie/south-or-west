@@ -1,14 +1,14 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, lis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, height, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, rainHeight, rainY, rightYAxis, saveStations, showStationList, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, x, xAxis;
 
 stations = [
   {
     name: "Nowra",
     url: "IDN60801/IDN60801.94750",
-    load: true
+    load: false
   }, {
     name: "Mt Boyce",
     url: "IDN60801/IDN60801.94743",
-    load: true
+    load: false
   }, {
     name: "Sydney (Observatory Hill)",
     url: "IDN60901/IDN60901.94768",
@@ -111,15 +111,6 @@ showToolTip = function(now, observations) {
   showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
   return showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
-};
-
-toggleStation = function(name) {
-  var station;
-  station = stations.filter(function(s) {
-    return s.name === name;
-  })[0];
-  station.load = !station.load;
-  return loadThenPlot();
 };
 
 sites = void 0;
@@ -343,25 +334,55 @@ d3.select(".chart").on("mousemove", function() {
   return d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0);
 });
 
-lis = d3.select("#source-list").selectAll("li").data(stations).enter().append("li");
-
-lis.append("input").attr("type", "checkbox").attr("onclick", function(d) {
-  return "toggleStation('" + d.name + "')";
-}).attr("id", function(d) {
-  return "show-" + d.name;
-});
-
-lis.append("a").attr("href", function(d) {
-  return "http://www.bom.gov.au/products/" + d.url + ".shtml";
-}).text(function(d) {
-  return d.name;
-});
-
-stations.forEach(function(s) {
-  if (s.load) {
-    return document.getElementById("show-" + s.name).checked = true;
+showStationList = function() {
+  var lis, s, savedStations, _i, _len, _ref, _results;
+  lis = d3.select("#source-list").selectAll("li").data(stations).enter().append("li");
+  lis.append("input").attr("type", "checkbox").attr("onclick", function(d) {
+    return "toggleStation('" + d.name + "')";
+  }).attr("id", function(d) {
+    return "show-" + d.name;
+  });
+  lis.append("a").attr("href", function(d) {
+    return "http://www.bom.gov.au/products/" + d.url + ".shtml";
+  }).text(function(d) {
+    return d.name;
+  });
+  if (localStorage) {
+    savedStations = localStorage.getItem("stations");
+    _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      s = _ref[_i];
+      stations.filter(function(d) {
+        return d.name === s;
+      })[0].load = true;
+      _results.push(document.getElementById("show-" + s).checked = true);
+    }
+    return _results;
   }
-});
+};
+
+saveStations = function() {
+  if (localStorage) {
+    return localStorage.setItem("stations", JSON.stringify(stations.filter(function(d) {
+      return d.load;
+    }).map(function(d) {
+      return d.name;
+    })));
+  }
+};
+
+toggleStation = function(name) {
+  var station;
+  station = stations.filter(function(s) {
+    return s.name === name;
+  })[0];
+  station.load = !station.load;
+  saveStations();
+  return loadThenPlot();
+};
+
+showStationList();
 
 loadThenPlot();
 
