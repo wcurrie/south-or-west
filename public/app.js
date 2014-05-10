@@ -65,11 +65,11 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   airTips.attr("x", xPos).attr("y", yPos).text(function(d) {
     return d[attr] + suffix;
   });
-  airTips.enter().append("text").attr("class", tipClassName).attr("dy", -2).attr("dx", 2);
+  airTips.enter().append("text").attr("class", tipClassName + " mouseTip").attr("dy", -2).attr("dx", 2);
   airTips.exit().remove();
   airDots = plotBox.selectAll("." + dotClassName).data(observations, joinByName);
   airDots.attr("cx", xPos).attr("cy", yPos);
-  airDots.enter().append("circle").attr("class", dotClassName).attr("r", "2");
+  airDots.enter().append("circle").attr("class", dotClassName + " mouseTip").attr("r", "2");
   return airDots.exit().remove();
 };
 
@@ -302,7 +302,7 @@ loadThenPlot = function() {
   });
 };
 
-verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", "500px").style("top", "30px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0.5");
+verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", "500px").style("top", "30px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
 
 d3.select(".chart").on("mousemove", function() {
   var mouseX, observed, time;
@@ -315,6 +315,11 @@ d3.select(".chart").on("mousemove", function() {
     });
     return showToolTip(time, observed);
   }
+}).on("mouseover", function() {
+  d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
+  return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
+}).on("mouseout", function() {
+  return d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0);
 });
 
 lis = d3.select("#source-list").selectAll("li").data(stations).enter().append("li");

@@ -43,7 +43,7 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
     .text((d) -> d[attr] + suffix)
   airTips.enter()
     .append("text")
-    .attr("class", tipClassName)
+    .attr("class", tipClassName + " mouseTip")
     .attr("dy", -2)
     .attr("dx", 2)
   airTips.exit().remove()
@@ -56,7 +56,7 @@ showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
     .attr("cy", yPos)
   airDots.enter()
     .append("circle")
-    .attr("class", dotClassName)
+    .attr("class", dotClassName + " mouseTip")
     .attr("r", "2")
   airDots.exit().remove()
 
@@ -96,7 +96,6 @@ toggleStation = (name) ->
   station = stations.filter((s) -> s.name == name)[0]
   station.load = !station.load
   loadThenPlot()
-
 
 sites = undefined  # for mouse move
 load = () ->
@@ -322,7 +321,7 @@ verticalMouseLine = d3.select(".chart")
   .style("bottom", "30px")
   .style("left", "0px")
   .style("background", "#000")
-  .style("opacity", "0.5")
+  .style("opacity", "0")
 
 d3.select(".chart")
   .on("mousemove", () ->
@@ -332,6 +331,11 @@ d3.select(".chart")
       time = x.invert(mouseX - margin.left)
       observed = sites.map((site) -> findObservationFor(site, time))
       showToolTip(time, observed)
+  ).on("mouseover", () ->
+    d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
+    d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
+  ).on("mouseout", () ->
+    d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0)
   )
 
 lis = d3.select("#source-list")
