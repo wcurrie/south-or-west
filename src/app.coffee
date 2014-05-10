@@ -119,26 +119,29 @@ plotBoxHeight = 650 + margin.graphGap*2
 airHeight = 450
 rainHeight = 100
 windHeight = 100
+plotYRanges = [
+  [airHeight, 0],
+  [airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap],
+  [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap]
+]
 
 x = d3.time.scale()
   .range([0, width])
   .clamp(true)
 
 tempY = d3.scale.linear()
-  .range([airHeight, 0])
+  .range(plotYRanges[0])
 
 windY = d3.scale.linear()
-  .range([airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap])
+  .range(plotYRanges[1])
   .clamp(true)
 
-rainAndHumidityRange = [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap]
-
 rainY = d3.scale.linear()
-  .range(rainAndHumidityRange)
+  .range(plotYRanges[2])
   .clamp(true)
 
 humidityY = d3.scale.linear()
-  .range(rainAndHumidityRange)
+  .range(plotYRanges[2])
   .domain([0, 100])
   .clamp(true)
 
@@ -159,10 +162,12 @@ leftHumidityYAxis = d3.svg.axis()
 rainYAxis = d3.svg.axis()
   .scale(rainY)
   .orient("right")
+  .ticks(5)
 
 windYAxis = d3.svg.axis()
   .scale(windY)
   .orient("right")
+  .ticks(8)
 
 tempLine = d3.svg.line()
   .interpolate("basis")
@@ -219,7 +224,7 @@ plot = (data) ->
 
   rainY.domain([
     0,
-    d3.max(rainTracePerSite, (site) -> d3.max(site.values, (v) -> v.rain))
+    Math.max(2, d3.max(rainTracePerSite, (site) -> d3.max(site.values, (v) -> v.rain)))
   ])
 
   windY.domain([
@@ -248,8 +253,8 @@ plot = (data) ->
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", 50)
-    .attr("x", -400)
-    .style("text-anchor", "end")
+    .attr("x", -windY.range()[0])
+    .style("text-anchor", "start")
     .html("Wind (km/h)")
 
   svg.append("g")
@@ -258,8 +263,8 @@ plot = (data) ->
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", -35)
-    .attr("x", -500)
-    .style("text-anchor", "end")
+    .attr("x", -humidityY.range()[0])
+    .style("text-anchor", "start")
     .html("Humidity (%)")
 
   svg.append("g")
@@ -269,8 +274,8 @@ plot = (data) ->
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("y", 50)
-    .attr("x", -500)
-    .style("text-anchor", "end")
+    .attr("x", -rainY.range()[0])
+    .style("text-anchor", "start")
     .html("Rain since 9am (mm)")
 
   # TODO: vary night shading to follow site under cursor...

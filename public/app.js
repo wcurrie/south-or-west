@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, rainAndHumidityRange, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -158,17 +158,17 @@ rainHeight = 100;
 
 windHeight = 100;
 
+plotYRanges = [[airHeight, 0], [airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap], [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap]];
+
 x = d3.time.scale().range([0, width]).clamp(true);
 
-tempY = d3.scale.linear().range([airHeight, 0]);
+tempY = d3.scale.linear().range(plotYRanges[0]);
 
-windY = d3.scale.linear().range([airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap]).clamp(true);
+windY = d3.scale.linear().range(plotYRanges[1]).clamp(true);
 
-rainAndHumidityRange = [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap];
+rainY = d3.scale.linear().range(plotYRanges[2]).clamp(true);
 
-rainY = d3.scale.linear().range(rainAndHumidityRange).clamp(true);
-
-humidityY = d3.scale.linear().range(rainAndHumidityRange).domain([0, 100]).clamp(true);
+humidityY = d3.scale.linear().range(plotYRanges[2]).domain([0, 100]).clamp(true);
 
 color = d3.scale.category10();
 
@@ -178,9 +178,9 @@ leftTemperatureYAxis = d3.svg.axis().scale(tempY).orient("left");
 
 leftHumidityYAxis = d3.svg.axis().scale(humidityY).orient("left");
 
-rainYAxis = d3.svg.axis().scale(rainY).orient("right");
+rainYAxis = d3.svg.axis().scale(rainY).orient("right").ticks(5);
 
-windYAxis = d3.svg.axis().scale(windY).orient("right");
+windYAxis = d3.svg.axis().scale(windY).orient("right").ticks(8);
 
 tempLine = d3.svg.line().interpolate("basis").x(function(d) {
   return x(d.date);
@@ -252,11 +252,11 @@ plot = function(data) {
     }) + 1
   ]);
   rainY.domain([
-    0, d3.max(rainTracePerSite, function(site) {
+    0, Math.max(2, d3.max(rainTracePerSite, function(site) {
       return d3.max(site.values, function(v) {
         return v.rain;
       });
-    })
+    }))
   ]);
   windY.domain([
     0, d3.max(sites, function(site) {
@@ -267,9 +267,9 @@ plot = function(data) {
   ]);
   svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + plotBoxHeight + ")").call(xAxis);
   svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -25).style("text-anchor", "end").html("Temperature (&deg;C)");
-  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -400).style("text-anchor", "end").html("Wind (km/h)");
-  svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -500).style("text-anchor", "end").html("Humidity (%)");
-  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -500).style("text-anchor", "end").html("Rain since 9am (mm)");
+  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -windY.range()[0]).style("text-anchor", "start").html("Wind (km/h)");
+  svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -humidityY.range()[0]).style("text-anchor", "start").html("Humidity (%)");
+  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start").html("Rain since 9am (mm)");
   svg.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
     return x(d.start);
   }).attr("width", function(d) {
