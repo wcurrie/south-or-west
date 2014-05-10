@@ -5,11 +5,13 @@ Resources
 * The mental model for d3 is explained super well [here](http://bost.ocks.org/mike/join/).
 * ES6 [Promises](http://www.html5rocks.com/en/tutorials/es6/promises/) for the sake of it.
 * [Polyfill](https://github.com/jakearchibald/es6-promise) because otherwise only at most 1/2 the world's browsers can see the page.
-* BOM json API
+* Australian government's BOM json API
 * Mouse over [example](http://bl.ocks.org/WillTurman/4631136).
 * Cors/cache proxy for BOM data (http server sample on dartlang site).
 * Heroku + Dart [write up](http://blog.sethladd.com/2012/08/running-dart-in-cloud-with-heroku.html) from Seth Ladd.
 * Sunrise & Sunset times in JS from [suncalc](https://github.com/mourner/suncalc).
+* [Coffeescript](http://coffeescript.org/) to avoid function and return on all the lambdas passed to d3.
+* Coffeescript compilation using [gulp.js](http://gulpjs.com/) to try it out.
 
 Next
 
