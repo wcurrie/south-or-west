@@ -26,18 +26,11 @@ findObservationFor = (site, date) ->
   scored.sort (a, b) -> a.delta - b.delta
   scored[0].observation
 
-showValueAtMouselineIntersection = (now, observations, attr, yScale, suffix) ->
+showValueAtMouselineIntersection = (now, observations, collisionGuard, attr, yScale, suffix) ->
   joinByName = (d) -> d.name
   xPos = x(now)
   yPos = (d) -> yScale.call(null, d[attr])
-  yValues = []
-
-  debounced = observations.filter((d) ->
-    newY = yPos(d)
-    collision = yValues.filter((y) -> Math.abs(y - newY) < 6).length > 0
-    yValues.push(newY) unless collision
-    !collision
-  )
+  debounced = observations.filter((d) -> collisionGuard(yPos(d)))
 
   tipClassName = "tip-" + attr
   dotClassName = "dot" + attr
@@ -110,12 +103,18 @@ showToolTip = (now, observations) ->
   rows.select(".wind").text((d) -> d.wind_spd_kmh)
   rows.select(".rain").text((d) -> d.rain_trace)
 
-  showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0")
-  showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0")
-  showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%")
-  showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h")
-  showValueAtMouselineIntersection(now, observations, "gust_kmh", windY, "km/h")
-  showValueAtMouselineIntersection(now, observations, "dewpt", tempY, "\u00B0")
+  usedYValues = []
+  collisionGuard = (newY) ->
+    collision = usedYValues.filter((y) -> Math.abs(y - newY) < 8).length > 0
+    usedYValues.push(newY) unless collision
+    !collision
+
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "air_temp", tempY, "\u00B0")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "apparent_t", tempY, "\u00B0")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "rel_hum", humidityY, "%")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "km/h")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "km/h")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "dewpt", tempY, "\u00B0")
   showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move

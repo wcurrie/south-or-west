@@ -51,8 +51,8 @@ findObservationFor = function(site, date) {
   return scored[0].observation;
 };
 
-showValueAtMouselineIntersection = function(now, observations, attr, yScale, suffix) {
-  var airDots, airTips, debounced, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos, yValues;
+showValueAtMouselineIntersection = function(now, observations, collisionGuard, attr, yScale, suffix) {
+  var airDots, airTips, debounced, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos;
   joinByName = function(d) {
     return d.name;
   };
@@ -60,17 +60,8 @@ showValueAtMouselineIntersection = function(now, observations, attr, yScale, suf
   yPos = function(d) {
     return yScale.call(null, d[attr]);
   };
-  yValues = [];
   debounced = observations.filter(function(d) {
-    var collision, newY;
-    newY = yPos(d);
-    collision = yValues.filter(function(y) {
-      return Math.abs(y - newY) < 6;
-    }).length > 0;
-    if (!collision) {
-      yValues.push(newY);
-    }
-    return !collision;
+    return collisionGuard(yPos(d));
   });
   tipClassName = "tip-" + attr;
   dotClassName = "dot" + attr;
@@ -105,7 +96,7 @@ showTimeAtTopOfMouseLine = function(now) {
 tooltipDateFormat = d3.time.format("%d %B %H:%M");
 
 showToolTip = function(now, observations) {
-  var row, rows;
+  var collisionGuard, row, rows, usedYValues;
   document.getElementById("time").textContent = tooltipDateFormat(now);
   rows = d3.select("#observations").selectAll("tr").data(observations);
   row = rows.enter().append("tr");
@@ -133,12 +124,23 @@ showToolTip = function(now, observations) {
   rows.select(".rain").text(function(d) {
     return d.rain_trace;
   });
-  showValueAtMouselineIntersection(now, observations, "air_temp", tempY, "\u00B0");
-  showValueAtMouselineIntersection(now, observations, "apparent_t", tempY, "\u00B0");
-  showValueAtMouselineIntersection(now, observations, "rel_hum", humidityY, "%");
-  showValueAtMouselineIntersection(now, observations, "wind_spd_kmh", windY, "km/h");
-  showValueAtMouselineIntersection(now, observations, "gust_kmh", windY, "km/h");
-  showValueAtMouselineIntersection(now, observations, "dewpt", tempY, "\u00B0");
+  usedYValues = [];
+  collisionGuard = function(newY) {
+    var collision;
+    collision = usedYValues.filter(function(y) {
+      return Math.abs(y - newY) < 8;
+    }).length > 0;
+    if (!collision) {
+      usedYValues.push(newY);
+    }
+    return !collision;
+  };
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "air_temp", tempY, "\u00B0");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "apparent_t", tempY, "\u00B0");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "rel_hum", humidityY, "%");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "km/h");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "km/h");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "dewpt", tempY, "\u00B0");
   return showTimeAtTopOfMouseLine(now);
 };
 
