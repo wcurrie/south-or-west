@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, mouseLineDateFormat, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -89,9 +89,11 @@ showTimeAtTopOfMouseLine = function(now) {
   mouseTip = d3.select(".plotBox").selectAll("text.mousedTime").data([now], function() {
     return 1;
   });
-  mouseTip.attr("x", x(now)).attr("y", 0).text(tooltipDateFormat(now));
+  mouseTip.attr("x", x(now)).attr("y", 0).text(mouseLineDateFormat(now));
   return mouseTip.enter().append("text").attr("class", "mousedTime mouseTip").attr("dy", -2).attr("dx", 2);
 };
+
+mouseLineDateFormat = d3.time.format("%a %H:%M");
 
 tooltipDateFormat = d3.time.format("%d %B %H:%M");
 
@@ -104,8 +106,8 @@ showToolTip = function(now, observations) {
   row.append("td").attr("class", "airTemp");
   row.append("td").attr("class", "apparentTemp");
   row.append("td").attr("class", "humidity");
-  row.append("td").attr("class", "wind");
   row.append("td").attr("class", "rain");
+  row.append("td").attr("class", "wind");
   rows.select(".name").text(function(d) {
     return d.name;
   });
@@ -118,11 +120,11 @@ showToolTip = function(now, observations) {
   rows.select(".humidity").text(function(d) {
     return d.rel_hum;
   });
-  rows.select(".wind").text(function(d) {
-    return d.wind_spd_kmh;
-  });
   rows.select(".rain").text(function(d) {
     return d.rain_trace;
+  });
+  rows.select(".wind").text(function(d) {
+    return d.wind_spd_kmh + " " + d.wind_dir;
   });
   usedYValues = [];
   collisionGuard = function(newY) {

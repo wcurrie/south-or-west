@@ -69,13 +69,14 @@ showTimeAtTopOfMouseLine = (now) ->
   mouseTip
     .attr("x", x(now))
     .attr("y", 0)
-    .text(tooltipDateFormat(now))
+    .text(mouseLineDateFormat(now))
   mouseTip.enter()
     .append("text")
     .attr("class", "mousedTime mouseTip")
     .attr("dy", -2)
     .attr("dx", 2)
 
+mouseLineDateFormat = d3.time.format("%a %H:%M")
 tooltipDateFormat = d3.time.format("%d %B %H:%M")
 
 showToolTip = (now, observations) ->
@@ -93,15 +94,15 @@ showToolTip = (now, observations) ->
   row.append("td").attr("class", "airTemp")
   row.append("td").attr("class", "apparentTemp")
   row.append("td").attr("class", "humidity")
-  row.append("td").attr("class", "wind")
   row.append("td").attr("class", "rain")
+  row.append("td").attr("class", "wind")
 
   rows.select(".name").text((d) -> d.name)
   rows.select(".airTemp").text((d) -> d.air_temp)
   rows.select(".apparentTemp").text((d) -> d.apparent_t)
   rows.select(".humidity").text((d) -> d.rel_hum)
-  rows.select(".wind").text((d) -> d.wind_spd_kmh)
   rows.select(".rain").text((d) -> d.rain_trace)
+  rows.select(".wind").text((d) -> d.wind_spd_kmh + " " + d.wind_dir)
 
   usedYValues = []
   collisionGuard = (newY) ->
