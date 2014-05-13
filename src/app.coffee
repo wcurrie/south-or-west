@@ -123,7 +123,7 @@ load = () ->
   urls = stations.filter((s) -> s.load).map((s) -> "/fwo/" + s.url + ".json")
   Promise.all(urls.map(loadJson))
 
-margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 10}
+margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 15}
 width = 960 - margin.left - margin.right
 plotBoxHeight = 650 + margin.graphGap*2
 airHeight = 450
@@ -168,6 +168,7 @@ leftTemperatureYAxis = d3.svg.axis()
 leftHumidityYAxis = d3.svg.axis()
   .scale(humidityY)
   .orient("left")
+  .ticks(5)
 
 rainYAxis = d3.svg.axis()
   .scale(rainY)
@@ -257,7 +258,7 @@ plot = (data) ->
     .call(leftTemperatureYAxis)
     .append("text")
     .attr("transform", "rotate(-90)")
-    .attr("y", -25)
+    .attr("y", -35)
     .style("text-anchor", "end")
     .html("Temperature (&deg;C)")
 
@@ -282,7 +283,7 @@ plot = (data) ->
     .style("text-anchor", "start")
     .html("Humidity (%)")
 
-  svg.append("g")
+  rainLabel = svg.append("g")
     .attr("class", "rightY axis")
     .attr("transform", "translate(" + width + ",0)")
     .call(rainYAxis)
@@ -290,8 +291,9 @@ plot = (data) ->
     .attr("transform", "rotate(-90)")
     .attr("y", 50)
     .attr("x", -rainY.range()[0])
-    .style("text-anchor", "start")
-    .html("Rain since 9am (mm)")
+    .style("text-anchor", "start");
+  rainLabel.append("tspan").text("Rain (mm)")
+  rainLabel.append("tspan").text("since 9am").attr("x", -rainY.range()[0]).attr("y", 65)
 
   # TODO: vary night shading to follow site under cursor...
   svg.selectAll(".night")
@@ -342,20 +344,11 @@ plot = (data) ->
     .style("stroke", colorByName)
 
   site.append("text")
-    .datum((d) -> {name: d.name, value: d.values[d.values.length - 1]})
+    .datum((d) -> {name: d.name, value: d.values[0]})
     .attr("transform", (d) -> "translate(" + x(d.value.date) + "," + tempY(d.value.airTemp) + ")")
     .attr("x", 3)
     .attr("dy", ".35em")
     .text((d) -> d.name)
-
-  site.append("text")
-    .datum((d) -> {name: d.name, value: d.values[d.values.length - 1]})
-    .attr("transform", (d) -> "translate(" + x(d.value.date) + "," + tempY(d.value.observation.dewpt) + ")")
-    .attr("x", 3)
-    .attr("dy", ".35em")
-    .text("Dew Point")
-    .attr("class", "mouseTip")
-    .style("opacity", 0)
 
   svg.selectAll(".site")
     .attr("opacity", 1)

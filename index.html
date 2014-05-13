@@ -2,8 +2,8 @@
 <meta charset="utf-8">
 <style>
 
-    body {
-        font: 10px sans-serif;
+    .chart {
+        font: 14px sans-serif;
     }
 
     .axis path,
@@ -60,6 +60,11 @@
 
     .disclaimer {
         clear: both;
+        font-size: 12px;
+    }
+
+    #source-list {
+        list-style: none;
     }
 </style>
 <body>
@@ -83,7 +88,7 @@
 <div class="explanation" style="visibility: hidden">
     <h3>What's going on here?</h3>
     <p>
-        The following observations from the <a href="http://bom.gov.au">BOM</a> are being plotted using <a href="http://d3js.org/">d3.js</a>
+        These observations from the <a href="http://bom.gov.au">BOM</a> are being plotted using <a href="http://d3js.org/">d3.js</a>
     </p>
 
     <ul id="source-list">
@@ -92,7 +97,7 @@
     <p>Want the code for some strange reason? See <a href="https://github.com/wcurrie/south-or-west">github</a>.</p>
 </div>
 <div class="disclaimer" style="visibility: hidden">
-    <p>The smooth lines are a bit of a lie. The BOM samples are about every 30 minutes. Smooth is pretty though.</p>
+    <p>The smooth lines are a bit of a lie. The BOM samples are about every 30 minutes.</p>
 </div>
 <script src="bower_components/d3/d3.min.js"></script>
 <script src="promise-1.0.0.min.js"></script>

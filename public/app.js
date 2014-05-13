@@ -163,7 +163,7 @@ margin = {
   right: 80,
   bottom: 30,
   left: 50,
-  graphGap: 10
+  graphGap: 15
 };
 
 width = 960 - margin.left - margin.right;
@@ -194,7 +194,7 @@ xAxis = d3.svg.axis().scale(x).orient("bottom");
 
 leftTemperatureYAxis = d3.svg.axis().scale(tempY).orient("left");
 
-leftHumidityYAxis = d3.svg.axis().scale(humidityY).orient("left");
+leftHumidityYAxis = d3.svg.axis().scale(humidityY).orient("left").ticks(5);
 
 rainYAxis = d3.svg.axis().scale(rainY).orient("right").ticks(5);
 
@@ -243,7 +243,7 @@ windArea = d3.svg.area().x(function(d) {
 svg = d3.select(".chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", plotBoxHeight + margin.top + margin.bottom).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 plot = function(data) {
-  var buckets, colorByName, mostRecent, nights, rainTracePerSite, rainTraces, site;
+  var buckets, colorByName, mostRecent, nights, rainLabel, rainTracePerSite, rainTraces, site;
   svg.selectAll("*").remove();
   d3.select("#observations").selectAll("tr").remove();
   sites = extractSeriesPerSite(data);
@@ -292,10 +292,12 @@ plot = function(data) {
     })
   ]);
   svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + plotBoxHeight + ")").call(xAxis);
-  svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -25).style("text-anchor", "end").html("Temperature (&deg;C)");
+  svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).style("text-anchor", "end").html("Temperature (&deg;C)");
   svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -windY.range()[0]).style("text-anchor", "start").html("Wind (km/h)");
   svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -humidityY.range()[0]).style("text-anchor", "start").html("Humidity (%)");
-  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start").html("Rain since 9am (mm)");
+  rainLabel = svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start");
+  rainLabel.append("tspan").text("Rain (mm)");
+  rainLabel.append("tspan").text("since 9am").attr("x", -rainY.range()[0]).attr("y", 65);
   svg.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
     return x(d.start);
   }).attr("width", function(d) {
@@ -323,21 +325,13 @@ plot = function(data) {
   site.append("text").datum(function(d) {
     return {
       name: d.name,
-      value: d.values[d.values.length - 1]
+      value: d.values[0]
     };
   }).attr("transform", function(d) {
     return "translate(" + x(d.value.date) + "," + tempY(d.value.airTemp) + ")";
   }).attr("x", 3).attr("dy", ".35em").text(function(d) {
     return d.name;
   });
-  site.append("text").datum(function(d) {
-    return {
-      name: d.name,
-      value: d.values[d.values.length - 1]
-    };
-  }).attr("transform", function(d) {
-    return "translate(" + x(d.value.date) + "," + tempY(d.value.observation.dewpt) + ")";
-  }).attr("x", 3).attr("dy", ".35em").text("Dew Point").attr("class", "mouseTip").style("opacity", 0);
   svg.selectAll(".site").attr("opacity", 1).on("mouseover", function(d, i) {
     return svg.selectAll(".site").transition().duration(250).attr("opacity", function(d, j) {
       var _ref;
