@@ -30,6 +30,7 @@ showValueAtMouselineIntersection = (now, observations, collisionGuard, attr, ySc
   joinByName = (d) -> d.name
   xPos = x(now)
   yPos = (d) -> yScale.call(null, d[attr])
+  clearOfRightYAxis = xPos < x.range()[1] - 40
   debounced = observations.filter((d) -> collisionGuard(yPos(d)))
 
   tipClassName = "tip-" + attr
@@ -42,7 +43,8 @@ showValueAtMouselineIntersection = (now, observations, collisionGuard, attr, ySc
   airTips
     .attr("x", xPos)
     .attr("y", yPos)
-    .attr("dx", () -> if xPos < x.range()[1] - 25 then 2 else -20)
+    .attr("dx", () -> if clearOfRightYAxis then 2 else -2)
+    .style("text-anchor", () -> if clearOfRightYAxis then "start" else "end")
     .text((d) -> d[attr] + suffix)
   airTips.enter()
     .append("text")
@@ -113,8 +115,8 @@ showToolTip = (now, observations) ->
   showValueAtMouselineIntersection(now, observations, collisionGuard, "air_temp", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, collisionGuard, "apparent_t", tempY, "\u00B0")
   showValueAtMouselineIntersection(now, observations, collisionGuard, "rel_hum", humidityY, "%")
-  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "km/h")
-  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "km/h")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "")
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "")
   showValueAtMouselineIntersection(now, observations, collisionGuard, "dewpt", tempY, "\u00B0")
   showTimeAtTopOfMouseLine(now)
 
@@ -409,21 +411,39 @@ verticalMouseLine = d3.select(".chart")
   .style("background", "#000")
   .style("opacity", "0")
 
-d3.select(".chart")
+showMouseLine = () ->
+  d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
+  d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
+
+hideMouseLine = () ->
+  d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0)
+
+moveMouseLine = (mouseX) ->
+  translatedMouseX = mouseX - margin.left
+  if sites and translatedMouseX > 0 and translatedMouseX < width
+    verticalMouseLine.style("left", (mouseX + 7) + "px")
+    time = x.invert(translatedMouseX)
+    observed = sites.map((site) -> findObservationFor(site, time))
+    showToolTip(time, observed)
+
+chart = d3.select(".chart")
+chart
   .on("mousemove", () ->
-    mouseX = d3.mouse(this)[0]
-    translatedMouseX = mouseX - margin.left
-    if sites and translatedMouseX > 0 and translatedMouseX < width
-      verticalMouseLine.style("left", (mouseX + 7) + "px")
-      time = x.invert(translatedMouseX)
-      observed = sites.map((site) -> findObservationFor(site, time))
-      showToolTip(time, observed)
-  ).on("mouseover", () ->
-    d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
-    d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
-  ).on("mouseout", () ->
-    d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0)
+    moveMouseLine(d3.mouse(this)[0])
   )
+  .on("mouseover", showMouseLine)
+  .on("mouseout", hideMouseLine)
+  .on("touchstart", () ->
+    moveMouseLine(d3.touches(this)[0][0])
+    showMouseLine()
+  )
+
+Hammer(document.querySelector(".chart"))
+  .on("drag", (event) ->
+    event.gesture.preventDefault()
+    position = d3.touches(chart[0][0], event.gesture.touches)
+    moveMouseLine(position[0][0])
+)
 
 showStationList = () ->
   lis = d3.select("#source-list")

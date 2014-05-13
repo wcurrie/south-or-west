@@ -66,6 +66,30 @@
     #source-list {
         list-style: none;
     }
+
+    @media only screen {
+        table {
+            width: 100%;
+        }
+        .tooltip {
+            font-size: 20px;
+        }
+        .explanation {
+            font-size: 18px;
+        }
+        td.wind {
+            min-width: 5em;
+        }
+    }
+
+    @media only screen and (min-width: 1000px) {
+        table {
+            width: inherit;
+        }
+        .tooltip, .explanation {
+            font-size: inherit;
+        }
+    }
 </style>
 <body>
 <div class="chart"></div>
@@ -102,6 +126,7 @@
 <script src="bower_components/d3/d3.min.js"></script>
 <script src="promise-1.0.0.min.js"></script>
 <script src="bower_components/suncalc/suncalc.js"></script>
+<script src="bower_components/hammerjs/hammer.min.js"></script>
 <script src="public/app.js"></script>
 
 <script>

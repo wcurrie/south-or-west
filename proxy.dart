@@ -8,12 +8,19 @@ final PORT = int.parse(Platform.environment.containsKey('PORT') ? Platform.envir
 final LOCAL_MODE = Platform.executableArguments.contains('--local-mode');
 
 serveFile(String name, HttpRequest request, String type) {
-  print("serving file " + name);
-  new File(name).readAsBytes().then((List<int> s) {
-    request.response
-      ..headers.add("Content-Type", type)
-      ..add(s)
-      ..close();
+  var file = new File(name);
+  file.exists().then((exists) {
+    if (exists) {
+      print("serving file " + name);
+      file.readAsBytes().then((List<int> s) {
+        request.response
+          ..headers.add("Content-Type", type)
+          ..add(s)
+          ..close();
+      });
+    } else {
+      notFound(request);
+    }
   });
 }
 
@@ -32,6 +39,13 @@ makeProxyRequest(HttpRequest request) {
       ..add(response.bodyBytes)
       ..close();
   });
+}
+
+notFound(HttpRequest request) {
+  request.response
+    ..statusCode = 404
+    ..reasonPhrase = "Not found"
+    ..close();
 }
 
 void main() {
@@ -53,12 +67,11 @@ void main() {
         }
       } else if (file.endsWith(".js")) {
         serveFile(file.substring(1), request, "text/javascript");
+      } else if (file.endsWith(".min.map")) {
+        serveFile(file.substring(1), request, "application/json");
       } else {
         print("Not found: " + file);
-        request.response
-          ..statusCode = 404
-          ..reasonPhrase = "Not found"
-          ..close();
+        notFound(request);
       }
     });
   });

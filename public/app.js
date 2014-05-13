@@ -1,4 +1,4 @@
-var airHeight, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, mouseLineDateFormat, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, chart, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -52,7 +52,7 @@ findObservationFor = function(site, date) {
 };
 
 showValueAtMouselineIntersection = function(now, observations, collisionGuard, attr, yScale, suffix) {
-  var airDots, airTips, debounced, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos;
+  var airDots, airTips, clearOfRightYAxis, debounced, dotClassName, joinByName, plotBox, tipClassName, xPos, yPos;
   joinByName = function(d) {
     return d.name;
   };
@@ -60,6 +60,7 @@ showValueAtMouselineIntersection = function(now, observations, collisionGuard, a
   yPos = function(d) {
     return yScale.call(null, d[attr]);
   };
+  clearOfRightYAxis = xPos < x.range()[1] - 40;
   debounced = observations.filter(function(d) {
     return collisionGuard(yPos(d));
   });
@@ -68,10 +69,16 @@ showValueAtMouselineIntersection = function(now, observations, collisionGuard, a
   plotBox = d3.select(".plotBox");
   airTips = plotBox.selectAll("text." + tipClassName).data(debounced, joinByName);
   airTips.attr("x", xPos).attr("y", yPos).attr("dx", function() {
-    if (xPos < x.range()[1] - 25) {
+    if (clearOfRightYAxis) {
       return 2;
     } else {
-      return -20;
+      return -2;
+    }
+  }).style("text-anchor", function() {
+    if (clearOfRightYAxis) {
+      return "start";
+    } else {
+      return "end";
     }
   }).text(function(d) {
     return d[attr] + suffix;
@@ -140,8 +147,8 @@ showToolTip = function(now, observations) {
   showValueAtMouselineIntersection(now, observations, collisionGuard, "air_temp", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, collisionGuard, "apparent_t", tempY, "\u00B0");
   showValueAtMouselineIntersection(now, observations, collisionGuard, "rel_hum", humidityY, "%");
-  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "km/h");
-  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "km/h");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "wind_spd_kmh", windY, "");
+  showValueAtMouselineIntersection(now, observations, collisionGuard, "gust_kmh", windY, "");
   showValueAtMouselineIntersection(now, observations, collisionGuard, "dewpt", tempY, "\u00B0");
   return showTimeAtTopOfMouseLine(now);
 };
@@ -380,9 +387,17 @@ loadThenPlot = function() {
 
 verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", plotBoxHeight + "px").style("top", "32px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
 
-d3.select(".chart").on("mousemove", function() {
-  var mouseX, observed, time, translatedMouseX;
-  mouseX = d3.mouse(this)[0];
+showMouseLine = function() {
+  d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
+  return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
+};
+
+hideMouseLine = function() {
+  return d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0);
+};
+
+moveMouseLine = function(mouseX) {
+  var observed, time, translatedMouseX;
   translatedMouseX = mouseX - margin.left;
   if (sites && translatedMouseX > 0 && translatedMouseX < width) {
     verticalMouseLine.style("left", (mouseX + 7) + "px");
@@ -392,11 +407,22 @@ d3.select(".chart").on("mousemove", function() {
     });
     return showToolTip(time, observed);
   }
-}).on("mouseover", function() {
-  d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
-  return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
-}).on("mouseout", function() {
-  return d3.selectAll(".mouseLine,.mouseTip").transition().duration(400).style("opacity", 0);
+};
+
+chart = d3.select(".chart");
+
+chart.on("mousemove", function() {
+  return moveMouseLine(d3.mouse(this)[0]);
+}).on("mouseover", showMouseLine).on("mouseout", hideMouseLine).on("touchstart", function() {
+  moveMouseLine(d3.touches(this)[0][0]);
+  return showMouseLine();
+});
+
+Hammer(document.querySelector(".chart")).on("drag", function(event) {
+  var position;
+  event.gesture.preventDefault();
+  position = d3.touches(chart[0][0], event.gesture.touches);
+  return moveMouseLine(position[0][0]);
 });
 
 showStationList = function() {

@@ -1,3 +1,7 @@
+Site
+
+On heroku at [bomobserved.herokuapp.com](http://bomobserved.herokuapp.com/)
+
 Resources
 
 * Starting point was this d3 [Multi-Series Line Chart](http://bl.ocks.org/mbostock/3884955) example.
@@ -12,6 +16,7 @@ Resources
 * Sunrise & Sunset times in JS from [suncalc](https://github.com/mourner/suncalc).
 * [Coffeescript](http://coffeescript.org/) to avoid function and return on all the lambdas passed to d3.
 * Coffeescript compilation using [gulp.js](http://gulpjs.com/) to try it out.
+* Drag touch event using [hammer.js](http://eightmedia.github.io/hammer.js/).
 
 Next
 
@@ -19,5 +24,3 @@ Next
 * Poll BOM site and store observations?
 * Make x-axis scale less odd
 * Responsive for iphone: bigger font, drag finger
-* Show wind and humidity
-* Add y-axis on right too
