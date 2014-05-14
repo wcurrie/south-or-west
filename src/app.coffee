@@ -1,12 +1,3 @@
-
-stations = [
-  {name: "Nowra", url: "IDN60801/IDN60801.94750", load: false},
-  {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: false},
-  {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
-  {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false},
-  {name: "Canberra", url: "IDN60903/IDN60903.94926", load: false}
-]
-
 loadJson = (url) ->
   new Promise (resolve, reject) ->
     d3.json url, (error, data) ->
@@ -123,7 +114,7 @@ showToolTip = (now, observations) ->
 sites = undefined  # for mouse move
 
 load = (baseUrl) ->
-  urls = stations.filter((s) -> s.load).map((s) -> baseUrl + "/fwo/" + s.url + ".json")
+  urls = BomStations.filter((s) -> s.load).map((s) -> baseUrl + "/fwo/" + s.url + ".json")
   Promise.all(urls.map(loadJson))
 
 margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 15}
@@ -230,9 +221,9 @@ plot = (data) ->
 
   d3.select("#observations").selectAll("tr").remove()
 
-  sites = extractSeriesPerSite(data)
-  rainTracePerSite = extractRainTracePerSite(sites)
-  nights = nightsPerSite(data)
+  observations = new BomObservations(data)
+  sites = observations.seriesPerSite
+  rainTracePerSite = observations.rainTracesPerSite
 
   color.domain(sites.map((site) -> site.name))
   colorByName = (d) -> color(d.name)
@@ -306,7 +297,7 @@ plot = (data) ->
 
   # TODO: vary night shading to follow site under cursor...
   plotBox.selectAll(".night")
-    .data(nights[0])
+    .data(observations.nightsPerSite[0])
     .enter()
     .append("rect")
     .attr("x", (d) -> x(d.start))
@@ -451,104 +442,14 @@ createMouseLine = (svgRoot) ->
       moveMouseLine(position[0][0])
   )
 
-showStationList = () ->
-  lis = d3.select("#source-list")
-    .selectAll("li")
-    .data(stations)
-    .enter()
-    .append("li")
-  lis.append("input")
-    .attr("type", "checkbox")
-    .attr("onclick", (d) -> "toggleStation('" + d.name + "')")
-    .attr("id", (d) -> "show-" + d.name)
-  lis.append("a")
-    .attr("href", (d) -> "http://www.bom.gov.au/products/" + d.url + ".shtml")
-    .text((d) -> d.name)
-  loadStations()
-  for s in stations when s.load
-    document.getElementById("show-" + s.name).checked = true
-
-loadStations = () ->
+loadPreferredStations = () ->
   if localStorage
     savedStations = localStorage.getItem("stations")
     for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
-      stations.filter((d) -> d.name == s)[0].load = true
+      BomStations.filter((d) -> d.name == s)[0].load = true
 
-saveStations = () ->
+savePreferredStations = () ->
   if localStorage
-    localStorage.setItem("stations", JSON.stringify(stations.filter((d) -> d.load).map((d) -> d.name)))
-
-toggleStation = (name) ->
-  station = stations.filter((s) -> s.name == name)[0]
-  station.load = !station.load
-  saveStations()
-  loadThenPlot()
+    localStorage.setItem("stations", JSON.stringify(BomStations.filter((d) -> d.load).map((d) -> d.name)))
 
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse
-
-###
-  Crunching data. Probably best moved to server side...
-###
-
-nightsPerSite = (sites) ->
-  parseDay = d3.time.format("%Y%m%d").parse
-
-  sites.map((site) ->
-    lat = 0
-    lon = 0
-    dates = d3.set()
-
-    site.observations.data.forEach((d) ->
-      dates.add(d.local_date_time_full.substr(0, 8))
-      lat = d.lat
-      lon = d.lon
-    )
-
-    timesPerDay = dates.values().sort(d3.ascending).map((d) ->
-      times = SunCalc.getTimes(parseDay(d), lat, lon)
-      { up: times.sunrise, down: times.sunset }
-    )
-
-    startOfTime = new Date(0)
-    endOfTime = new Date(Math.pow(2, 32) * 1000)
-
-    nights = [{ start: startOfTime, end: timesPerDay[0].up } ]
-
-    timesPerDay.forEach((t, i) ->
-      nights.push({
-        start: t.down,
-        end: if i+1 < timesPerDay.length then timesPerDay[i+1].up else endOfTime
-      })
-    )
-    nights
-  )
-
-extractSeriesPerSite = (data) ->
-  ascendingByDate = (d1, d2) -> d3.ascending(d1.date.getTime(), d2.date.getTime())
-  data.map (site) ->
-    {
-    name: site.observations.header[0].name,
-    values: site.observations.data.map((d) ->
-      {
-      date: parseDate(d.local_date_time_full),
-      airTemp: d.air_temp,
-      apparentTemp: d.apparent_t,
-      observation: d
-      }
-    ).sort(ascendingByDate)
-    }
-
-extractRainTracePerSite = (sites) ->
-  startOfTime = new Date(0)
-  endOfTime = new Date(Math.pow(2, 32) * 1000)
-
-  sites.map((site) ->
-    values = site.values.map((d, i, values) ->
-      {
-      start: if i == 0 then startOfTime else d.date,
-      end: if i+1 < values.length then values[i+1].date else endOfTime,
-      rain: parseFloat(d.observation.rain_trace)
-      }
-    ).filter((v) -> v.rain > 0)
-    { name: site.name, values: values }
-  )

@@ -1,28 +1,4 @@
-var airHeight, color, createMouseLine, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
-
-stations = [
-  {
-    name: "Nowra",
-    url: "IDN60801/IDN60801.94750",
-    load: false
-  }, {
-    name: "Mt Boyce",
-    url: "IDN60801/IDN60801.94743",
-    load: false
-  }, {
-    name: "Sydney (Observatory Hill)",
-    url: "IDN60901/IDN60901.94768",
-    load: false
-  }, {
-    name: "Horsham",
-    url: "IDV60801/IDV60801.95839",
-    load: false
-  }, {
-    name: "Canberra",
-    url: "IDN60903/IDN60903.94926",
-    load: false
-  }
-];
+var airHeight, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadPreferredStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, savePreferredStations, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 loadJson = function(url) {
   return new Promise(function(resolve, reject) {
@@ -157,7 +133,7 @@ sites = void 0;
 
 load = function(baseUrl) {
   var urls;
-  urls = stations.filter(function(s) {
+  urls = BomStations.filter(function(s) {
     return s.load;
   }).map(function(s) {
     return baseUrl + "/fwo/" + s.url + ".json";
@@ -248,7 +224,7 @@ windArea = d3.svg.area().x(function(d) {
 });
 
 plot = function(data) {
-  var buckets, colorByName, mostRecent, nights, plotBox, rainLabel, rainTracePerSite, rainTraces, site, svgRoot;
+  var buckets, colorByName, mostRecent, observations, plotBox, rainLabel, rainTracePerSite, rainTraces, site, svgRoot;
   plotBox = d3.select(".chart").select("svg").select("g");
   if (plotBox.empty()) {
     svgRoot = d3.select(".chart").append("svg").attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom));
@@ -258,9 +234,9 @@ plot = function(data) {
     plotBox.selectAll("*").remove();
   }
   d3.select("#observations").selectAll("tr").remove();
-  sites = extractSeriesPerSite(data);
-  rainTracePerSite = extractRainTracePerSite(sites);
-  nights = nightsPerSite(data);
+  observations = new BomObservations(data);
+  sites = observations.seriesPerSite;
+  rainTracePerSite = observations.rainTracesPerSite;
   color.domain(sites.map(function(site) {
     return site.name;
   }));
@@ -310,7 +286,7 @@ plot = function(data) {
   rainLabel = plotBox.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start");
   rainLabel.append("tspan").text("Rain (mm)");
   rainLabel.append("tspan").text("since 9am").attr("x", -rainY.range()[0]).attr("y", 65);
-  plotBox.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
+  plotBox.selectAll(".night").data(observations.nightsPerSite[0]).enter().append("rect").attr("x", function(d) {
     return x(d.start);
   }).attr("width", function(d) {
     return x(d.end) - x(d.start);
@@ -437,31 +413,7 @@ createMouseLine = function(svgRoot) {
   });
 };
 
-showStationList = function() {
-  var lis, s, _i, _len, _results;
-  lis = d3.select("#source-list").selectAll("li").data(stations).enter().append("li");
-  lis.append("input").attr("type", "checkbox").attr("onclick", function(d) {
-    return "toggleStation('" + d.name + "')";
-  }).attr("id", function(d) {
-    return "show-" + d.name;
-  });
-  lis.append("a").attr("href", function(d) {
-    return "http://www.bom.gov.au/products/" + d.url + ".shtml";
-  }).text(function(d) {
-    return d.name;
-  });
-  loadStations();
-  _results = [];
-  for (_i = 0, _len = stations.length; _i < _len; _i++) {
-    s = stations[_i];
-    if (s.load) {
-      _results.push(document.getElementById("show-" + s.name).checked = true);
-    }
-  }
-  return _results;
-};
-
-loadStations = function() {
+loadPreferredStations = function() {
   var s, savedStations, _i, _len, _ref, _results;
   if (localStorage) {
     savedStations = localStorage.getItem("stations");
@@ -469,7 +421,7 @@ loadStations = function() {
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       s = _ref[_i];
-      _results.push(stations.filter(function(d) {
+      _results.push(BomStations.filter(function(d) {
         return d.name === s;
       })[0].load = true);
     }
@@ -477,9 +429,9 @@ loadStations = function() {
   }
 };
 
-saveStations = function() {
+savePreferredStations = function() {
   if (localStorage) {
-    return localStorage.setItem("stations", JSON.stringify(stations.filter(function(d) {
+    return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
       return d.load;
     }).map(function(d) {
       return d.name;
@@ -487,100 +439,167 @@ saveStations = function() {
   }
 };
 
-toggleStation = function(name) {
-  var station;
-  station = stations.filter(function(s) {
-    return s.name === name;
-  })[0];
-  station.load = !station.load;
-  saveStations();
-  return loadThenPlot();
-};
-
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
 
+var BomObservations, BomStations;
 
-/*
-  Crunching data. Probably best moved to server side...
- */
+BomStations = [
+  {
+    name: "Nowra",
+    url: "IDN60801/IDN60801.94750",
+    load: false
+  }, {
+    name: "Mt Boyce",
+    url: "IDN60801/IDN60801.94743",
+    load: false
+  }, {
+    name: "Sydney (Observatory Hill)",
+    url: "IDN60901/IDN60901.94768",
+    load: false
+  }, {
+    name: "Horsham",
+    url: "IDV60801/IDV60801.95839",
+    load: false
+  }, {
+    name: "Canberra",
+    url: "IDN60903/IDN60903.94926",
+    load: false
+  }
+];
 
-nightsPerSite = function(sites) {
-  var parseDay;
-  parseDay = d3.time.format("%Y%m%d").parse;
-  return sites.map(function(site) {
-    var dates, endOfTime, lat, lon, nights, startOfTime, timesPerDay;
-    lat = 0;
-    lon = 0;
-    dates = d3.set();
-    site.observations.data.forEach(function(d) {
-      dates.add(d.local_date_time_full.substr(0, 8));
-      lat = d.lat;
-      return lon = d.lon;
+BomObservations = (function() {
+  function BomObservations(dataPerSite) {
+    this.dataPerSite = dataPerSite;
+    this.seriesPerSite = this.extractSeriesPerSite(this.dataPerSite);
+    this.rainTracesPerSite = this.extractRainTracePerSite(this.seriesPerSite);
+    this.nightsPerSite = this.extractNightsPerSite(this.dataPerSite);
+  }
+
+
+  /*
+    Crunching data. Probably best moved to server side... a
+   */
+
+  BomObservations.prototype.extractNightsPerSite = function(sites) {
+    var parseDay;
+    parseDay = d3.time.format("%Y%m%d").parse;
+    return sites.map(function(site) {
+      var dates, endOfTime, lat, lon, nights, startOfTime, timesPerDay;
+      lat = 0;
+      lon = 0;
+      dates = d3.set();
+      site.observations.data.forEach(function(d) {
+        dates.add(d.local_date_time_full.substr(0, 8));
+        lat = d.lat;
+        return lon = d.lon;
+      });
+      timesPerDay = dates.values().sort(d3.ascending).map(function(d) {
+        var times;
+        times = SunCalc.getTimes(parseDay(d), lat, lon);
+        return {
+          up: times.sunrise,
+          down: times.sunset
+        };
+      });
+      startOfTime = new Date(0);
+      endOfTime = new Date(Math.pow(2, 32) * 1000);
+      nights = [
+        {
+          start: startOfTime,
+          end: timesPerDay[0].up
+        }
+      ];
+      timesPerDay.forEach(function(t, i) {
+        return nights.push({
+          start: t.down,
+          end: i + 1 < timesPerDay.length ? timesPerDay[i + 1].up : endOfTime
+        });
+      });
+      return nights;
     });
-    timesPerDay = dates.values().sort(d3.ascending).map(function(d) {
-      var times;
-      times = SunCalc.getTimes(parseDay(d), lat, lon);
+  };
+
+  BomObservations.prototype.extractSeriesPerSite = function(data) {
+    var ascendingByDate;
+    ascendingByDate = function(d1, d2) {
+      return d3.ascending(d1.date.getTime(), d2.date.getTime());
+    };
+    return data.map(function(site) {
       return {
-        up: times.sunrise,
-        down: times.sunset
+        name: site.observations.header[0].name,
+        values: site.observations.data.map(function(d) {
+          return {
+            date: parseDate(d.local_date_time_full),
+            airTemp: d.air_temp,
+            apparentTemp: d.apparent_t,
+            observation: d
+          };
+        }).sort(ascendingByDate)
       };
     });
+  };
+
+  BomObservations.prototype.extractRainTracePerSite = function(sites) {
+    var endOfTime, startOfTime;
     startOfTime = new Date(0);
     endOfTime = new Date(Math.pow(2, 32) * 1000);
-    nights = [
-      {
-        start: startOfTime,
-        end: timesPerDay[0].up
-      }
-    ];
-    timesPerDay.forEach(function(t, i) {
-      return nights.push({
-        start: t.down,
-        end: i + 1 < timesPerDay.length ? timesPerDay[i + 1].up : endOfTime
-      });
-    });
-    return nights;
-  });
-};
-
-extractSeriesPerSite = function(data) {
-  var ascendingByDate;
-  ascendingByDate = function(d1, d2) {
-    return d3.ascending(d1.date.getTime(), d2.date.getTime());
-  };
-  return data.map(function(site) {
-    return {
-      name: site.observations.header[0].name,
-      values: site.observations.data.map(function(d) {
+    return sites.map(function(site) {
+      var values;
+      values = site.values.map(function(d, i, values) {
         return {
-          date: parseDate(d.local_date_time_full),
-          airTemp: d.air_temp,
-          apparentTemp: d.apparent_t,
-          observation: d
+          start: i === 0 ? startOfTime : d.date,
+          end: i + 1 < values.length ? values[i + 1].date : endOfTime,
+          rain: parseFloat(d.observation.rain_trace)
         };
-      }).sort(ascendingByDate)
-    };
-  });
-};
-
-extractRainTracePerSite = function(sites) {
-  var endOfTime, startOfTime;
-  startOfTime = new Date(0);
-  endOfTime = new Date(Math.pow(2, 32) * 1000);
-  return sites.map(function(site) {
-    var values;
-    values = site.values.map(function(d, i, values) {
+      }).filter(function(v) {
+        return v.rain > 0;
+      });
       return {
-        start: i === 0 ? startOfTime : d.date,
-        end: i + 1 < values.length ? values[i + 1].date : endOfTime,
-        rain: parseFloat(d.observation.rain_trace)
+        name: site.name,
+        values: values
       };
-    }).filter(function(v) {
-      return v.rain > 0;
     });
-    return {
-      name: site.name,
-      values: values
-    };
-  });
-};
+  };
+
+  return BomObservations;
+
+})();
+
+angular.module('desktop', []).factory('Observations', function($http, $q) {
+  var loadStation;
+  loadStation = function(url) {
+    return $http({
+      method: 'GET',
+      url: url
+    });
+  };
+  return {
+    load: function() {
+      var urls;
+      urls = BomStations.filter(function(s) {
+        return s.load;
+      }).map(function(s) {
+        return "/fwo/" + s.url + ".json";
+      });
+      return $q.all(urls.map(loadStation)).then(function(responses) {
+        return responses.map(function(r) {
+          return r.data;
+        });
+      })["catch"](function(data, status) {
+        return console.log(data, status);
+      });
+    }
+  };
+}).controller('DesktopController', function($scope, Observations) {
+  var loadThenPlot;
+  loadThenPlot = function() {
+    return Observations.load().then(plot);
+  };
+  $scope.stations = BomStations;
+  $scope.reload = function() {
+    savePreferredStations();
+    return loadThenPlot();
+  };
+  loadPreferredStations();
+  return loadThenPlot();
+});
