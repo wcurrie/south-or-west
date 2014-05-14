@@ -1,4 +1,4 @@
-var airHeight, bindMouseLineListeners, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, createMouseLine, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -248,12 +248,14 @@ windArea = d3.svg.area().x(function(d) {
 });
 
 plot = function(data) {
-  var buckets, colorByName, mostRecent, nights, rainLabel, rainTracePerSite, rainTraces, site, svg;
-  svg = d3.select(".chart").select("svg").select("g");
-  if (svg.empty()) {
-    svg = d3.select(".chart").append("svg").attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom)).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  var buckets, colorByName, mostRecent, nights, plotBox, rainLabel, rainTracePerSite, rainTraces, site, svgRoot;
+  plotBox = d3.select(".chart").select("svg").select("g");
+  if (plotBox.empty()) {
+    svgRoot = d3.select(".chart").append("svg").attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom));
+    plotBox = svgRoot.append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    createMouseLine(svgRoot);
   } else {
-    svg.selectAll("*").remove();
+    plotBox.selectAll("*").remove();
   }
   d3.select("#observations").selectAll("tr").remove();
   sites = extractSeriesPerSite(data);
@@ -301,19 +303,19 @@ plot = function(data) {
       });
     })
   ]);
-  svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + plotBoxHeight + ")").call(xAxis);
-  svg.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).style("text-anchor", "end").html("Temperature (&deg;C)");
-  svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -windY.range()[0]).style("text-anchor", "start").html("Wind (km/h)");
-  svg.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -humidityY.range()[0]).style("text-anchor", "start").html("Humidity (%)");
-  rainLabel = svg.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start");
+  plotBox.append("g").attr("class", "x axis").attr("transform", "translate(0," + plotBoxHeight + ")").call(xAxis);
+  plotBox.append("g").attr("class", "tempY axis").call(leftTemperatureYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).style("text-anchor", "end").html("Temperature (&deg;C)");
+  plotBox.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(windYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -windY.range()[0]).style("text-anchor", "start").html("Wind (km/h)");
+  plotBox.append("g").attr("class", "humidityY axis").call(leftHumidityYAxis).append("text").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -humidityY.range()[0]).style("text-anchor", "start").html("Humidity (%)");
+  rainLabel = plotBox.append("g").attr("class", "rightY axis").attr("transform", "translate(" + width + ",0)").call(rainYAxis).append("text").attr("transform", "rotate(-90)").attr("y", 50).attr("x", -rainY.range()[0]).style("text-anchor", "start");
   rainLabel.append("tspan").text("Rain (mm)");
   rainLabel.append("tspan").text("since 9am").attr("x", -rainY.range()[0]).attr("y", 65);
-  svg.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
+  plotBox.selectAll(".night").data(nights[0]).enter().append("rect").attr("x", function(d) {
     return x(d.start);
   }).attr("width", function(d) {
     return x(d.end) - x(d.start);
   }).attr("y", 0).attr("height", plotBoxHeight).attr("class", "night");
-  site = svg.selectAll(".site").data(sites).enter().append("g").attr("class", "site");
+  site = plotBox.selectAll(".site").data(sites).enter().append("g").attr("class", "site");
   site.append("path").attr("class", "line").attr("d", function(d) {
     return tempLine(d.values);
   }).style("stroke", colorByName);
@@ -342,17 +344,17 @@ plot = function(data) {
   }).attr("x", 3).attr("dy", ".35em").text(function(d) {
     return d.name;
   });
-  svg.selectAll(".site").attr("opacity", 1).on("mouseover", function(d, i) {
-    return svg.selectAll(".site").transition().duration(250).attr("opacity", function(d, j) {
+  plotBox.selectAll(".site").attr("opacity", 1).on("mouseover", function(d, i) {
+    return plotBox.selectAll(".site").transition().duration(250).attr("opacity", function(d, j) {
       var _ref;
       return (_ref = j !== i) != null ? _ref : {
         0.6: 1
       };
     });
   }).on("mouseout", function() {
-    return svg.selectAll(".site").transition().duration(250).attr("opacity", 1);
+    return plotBox.selectAll(".site").transition().duration(250).attr("opacity", 1);
   });
-  rainTraces = svg.selectAll(".rainTrace").data(rainTracePerSite).enter().append("g").attr("class", "rainTrace").attr("fill", colorByName).style("stroke", colorByName);
+  rainTraces = plotBox.selectAll(".rainTrace").data(rainTracePerSite).enter().append("g").attr("class", "rainTrace").attr("fill", colorByName).style("stroke", colorByName);
   buckets = rainTraces.selectAll("rect").data(function(d) {
     return d.values;
   }).enter();
@@ -391,8 +393,6 @@ loadThenPlot = function(baseUrl) {
   });
 };
 
-verticalMouseLine = d3.select(".chart").append("div").attr("class", "mouseLine").style("position", "absolute").style("z-index", "19").style("width", "1px").style("height", plotBoxHeight + "px").style("top", "32px").style("bottom", "30px").style("left", "0px").style("background", "#000").style("opacity", "0");
-
 showMouseLine = function() {
   d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
   return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
@@ -403,10 +403,14 @@ hideMouseLine = function() {
 };
 
 moveMouseLine = function(mouseX) {
-  var observed, time, translatedMouseX;
+  var observed, time, translatedMouseX, xPos;
   translatedMouseX = mouseX - margin.left;
   if (sites && translatedMouseX > 0 && translatedMouseX < width) {
-    verticalMouseLine.style("left", (mouseX + 7) + "px");
+    xPos = (mouseX - 1) + "px";
+    d3.select(".mouseLine").attr({
+      x1: xPos,
+      x2: xPos
+    });
     time = x.invert(translatedMouseX);
     observed = sites.map(function(site) {
       return findObservationFor(site, time);
@@ -415,16 +419,17 @@ moveMouseLine = function(mouseX) {
   }
 };
 
-bindMouseLineListeners = function() {
+createMouseLine = function(svgRoot) {
   var chart;
-  chart = d3.select(".chart");
+  svgRoot.append("line").attr("class", "mouseLine").style("stroke", "black").style("opacity", "0").attr("x1", margin.left).attr("x2", margin.left).attr("y1", margin.top).attr("y2", plotBoxHeight + margin.top);
+  chart = d3.select("svg");
   chart.on("mousemove", function() {
     return moveMouseLine(d3.mouse(this)[0]);
   }).on("mouseover", showMouseLine).on("mouseout", hideMouseLine).on("touchstart", function() {
     moveMouseLine(d3.touches(this)[0][0]);
     return showMouseLine();
   });
-  return Hammer(document.querySelector(".chart")).on("drag", function(event) {
+  return Hammer(document.querySelector("svg")).on("drag", function(event) {
     var position;
     event.gesture.preventDefault();
     position = d3.touches(chart[0][0], event.gesture.touches);

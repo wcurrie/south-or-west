@@ -214,15 +214,19 @@ windArea = d3.svg.area()
   .y1((d) -> windY(d.observation.gust_kmh))
 
 plot = (data) ->
-  svg = d3.select(".chart").select("svg").select("g")
-  if svg.empty()
-    svg = d3.select(".chart").append("svg")
+  plotBox = d3.select(".chart").select("svg").select("g")
+  if plotBox.empty()
+    svgRoot = d3.select(".chart").append("svg")
       .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom))
+
+    plotBox = svgRoot
       .append("g")
       .attr("class", "plotBox")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+    createMouseLine(svgRoot);
   else
-    svg.selectAll("*").remove()
+    plotBox.selectAll("*").remove()
 
   d3.select("#observations").selectAll("tr").remove()
 
@@ -253,12 +257,12 @@ plot = (data) ->
     d3.max(sites, (site) -> d3.max(site.values, (v) -> d3.max([v.observation.wind_spd_kmh, v.observation.gust_kmh])))
   ])
 
-  svg.append("g")
+  plotBox.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + plotBoxHeight + ")")
     .call(xAxis)
 
-  svg.append("g")
+  plotBox.append("g")
     .attr("class", "tempY axis")
     .call(leftTemperatureYAxis)
     .append("text")
@@ -267,7 +271,7 @@ plot = (data) ->
     .style("text-anchor", "end")
     .html("Temperature (&deg;C)")
 
-  svg.append("g")
+  plotBox.append("g")
     .attr("class", "rightY axis")
     .attr("transform", "translate(" + width + ",0)")
     .call(windYAxis)
@@ -278,7 +282,7 @@ plot = (data) ->
     .style("text-anchor", "start")
     .html("Wind (km/h)")
 
-  svg.append("g")
+  plotBox.append("g")
     .attr("class", "humidityY axis")
     .call(leftHumidityYAxis)
     .append("text")
@@ -288,7 +292,7 @@ plot = (data) ->
     .style("text-anchor", "start")
     .html("Humidity (%)")
 
-  rainLabel = svg.append("g")
+  rainLabel = plotBox.append("g")
     .attr("class", "rightY axis")
     .attr("transform", "translate(" + width + ",0)")
     .call(rainYAxis)
@@ -301,7 +305,7 @@ plot = (data) ->
   rainLabel.append("tspan").text("since 9am").attr("x", -rainY.range()[0]).attr("y", 65)
 
   # TODO: vary night shading to follow site under cursor...
-  svg.selectAll(".night")
+  plotBox.selectAll(".night")
     .data(nights[0])
     .enter()
     .append("rect")
@@ -311,7 +315,7 @@ plot = (data) ->
     .attr("height", plotBoxHeight)
     .attr("class", "night")
 
-  site = svg.selectAll(".site")
+  site = plotBox.selectAll(".site")
     .data(sites)
     .enter().append("g")
     .attr("class", "site")
@@ -355,19 +359,19 @@ plot = (data) ->
     .attr("dy", ".35em")
     .text((d) -> d.name)
 
-  svg.selectAll(".site")
+  plotBox.selectAll(".site")
     .attr("opacity", 1)
     .on("mouseover", (d, i) ->
-      svg.selectAll(".site").transition()
+      plotBox.selectAll(".site").transition()
         .duration(250)
         .attr("opacity", (d, j) -> j != i ? 0.6 : 1)
     ).on("mouseout", () ->
-      svg.selectAll(".site").transition()
+      plotBox.selectAll(".site").transition()
         .duration(250)
         .attr("opacity", 1)
     )
 
-  rainTraces = svg.selectAll(".rainTrace")
+  rainTraces = plotBox.selectAll(".rainTrace")
     .data(rainTracePerSite)
     .enter().append("g")
       .attr("class", "rainTrace")
@@ -401,19 +405,6 @@ loadThenPlot = (baseUrl="") ->
     console.log(error.stack)
   )
 
-verticalMouseLine = d3.select(".chart")
-  .append("div")
-  .attr("class", "mouseLine")
-  .style("position", "absolute")
-  .style("z-index", "19")
-  .style("width", "1px")
-  .style("height", plotBoxHeight + "px")
-  .style("top", "32px")
-  .style("bottom", "30px")
-  .style("left", "0px")
-  .style("background", "#000")
-  .style("opacity", "0")
-
 showMouseLine = () ->
   d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
   d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
@@ -424,13 +415,24 @@ hideMouseLine = () ->
 moveMouseLine = (mouseX) ->
   translatedMouseX = mouseX - margin.left
   if sites and translatedMouseX > 0 and translatedMouseX < width
-    verticalMouseLine.style("left", (mouseX + 7) + "px")
+    xPos = (mouseX - 1) + "px"
+    d3.select(".mouseLine")
+      .attr({x1: xPos, x2: xPos})
     time = x.invert(translatedMouseX)
     observed = sites.map((site) -> findObservationFor(site, time))
     showToolTip(time, observed)
 
-bindMouseLineListeners = () ->
-  chart = d3.select(".chart")
+createMouseLine = (svgRoot) ->
+  svgRoot.append("line")
+    .attr("class", "mouseLine")
+    .style("stroke", "black")
+    .style("opacity", "0")
+    .attr("x1", margin.left)
+    .attr("x2", margin.left)
+    .attr("y1", margin.top)
+    .attr("y2", plotBoxHeight + margin.top)
+
+  chart = d3.select("svg")
   chart
     .on("mousemove", () ->
       moveMouseLine(d3.mouse(this)[0])
@@ -442,7 +444,7 @@ bindMouseLineListeners = () ->
       showMouseLine()
     )
 
-  Hammer(document.querySelector(".chart"))
+  Hammer(document.querySelector("svg"))
     .on("drag", (event) ->
       event.gesture.preventDefault()
       position = d3.touches(chart[0][0], event.gesture.touches)
