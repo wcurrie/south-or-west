@@ -16,6 +16,8 @@ class BomObservations
     Crunching data. Probably best moved to server side... a
   ###
 
+  parseDate = d3.time.format("%Y%m%d%H%M%S").parse
+
   extractNightsPerSite: (sites) ->
     parseDay = d3.time.format("%Y%m%d").parse
 

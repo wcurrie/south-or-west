@@ -1,4 +1,4 @@
-angular.module('desktop', [])
+angular.module('desktop', ['bom.plot'])
     .factory('Observations', ($http, $q) ->
         loadStation = (url) -> $http({method: 'GET', url: url})
         return {
@@ -22,7 +22,7 @@ angular.module('desktop', [])
       }
     )
     .controller('DesktopController', ($scope, Observations, Preferences) ->
-        loadThenPlot = () -> Observations.load().then((d) -> plot(d, $scope))
+        loadThenPlot = () -> Observations.load().then((d) -> $scope.plot(d))
 
         $scope.stations = BomStations
         $scope.reload = () ->
