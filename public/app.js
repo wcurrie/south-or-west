@@ -1,28 +1,82 @@
-var BomObservations, BomStations;
+var BomObservations;
 
-BomStations = [
-  {
-    name: "Nowra",
-    url: "IDN60801/IDN60801.94750",
-    load: false
-  }, {
-    name: "Mt Boyce",
-    url: "IDN60801/IDN60801.94743",
-    load: false
-  }, {
-    name: "Sydney (Observatory Hill)",
-    url: "IDN60901/IDN60901.94768",
-    load: false
-  }, {
-    name: "Horsham",
-    url: "IDV60801/IDV60801.95839",
-    load: false
-  }, {
-    name: "Canberra",
-    url: "IDN60903/IDN60903.94926",
-    load: false
-  }
-];
+angular.module('bom.observations', []).factory('BomStations', function() {
+  return [
+    {
+      name: "Nowra",
+      url: "IDN60801/IDN60801.94750",
+      load: false
+    }, {
+      name: "Mt Boyce",
+      url: "IDN60801/IDN60801.94743",
+      load: false
+    }, {
+      name: "Sydney (Observatory Hill)",
+      url: "IDN60901/IDN60901.94768",
+      load: false
+    }, {
+      name: "Horsham",
+      url: "IDV60801/IDV60801.95839",
+      load: false
+    }, {
+      name: "Canberra",
+      url: "IDN60903/IDN60903.94926",
+      load: false
+    }
+  ];
+}).factory('Observations', function($http, $q) {
+  var loadStation;
+  loadStation = function(url) {
+    return $http({
+      method: 'GET',
+      url: url
+    });
+  };
+  return {
+    load: function(stations) {
+      var urls;
+      urls = stations.filter(function(s) {
+        return s.load;
+      }).map(function(s) {
+        return "/fwo/" + s.url + ".json";
+      });
+      return $q.all(urls.map(loadStation)).then(function(responses) {
+        return responses.map(function(r) {
+          return r.data;
+        });
+      })["catch"](function(data, status) {
+        return console.log(data, status);
+      });
+    }
+  };
+}).factory('Preferences', function(BomStations) {
+  return {
+    load: function() {
+      var s, savedStations, _i, _len, _ref, _results;
+      if (localStorage) {
+        savedStations = localStorage.getItem("stations");
+        _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          s = _ref[_i];
+          _results.push(BomStations.filter(function(d) {
+            return d.name === s;
+          })[0].load = true);
+        }
+        return _results;
+      }
+    },
+    save: function() {
+      if (localStorage) {
+        return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
+          return d.load;
+        }).map(function(d) {
+          return d.name;
+        })));
+      }
+    }
+  };
+});
 
 BomObservations = (function() {
   var parseDate;
@@ -126,10 +180,10 @@ BomObservations = (function() {
 
 })();
 
-angular.module('bom.plot', []).directive('bomPlot', function() {
+angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(Observations) {
   return {
-    link: function(scope, element) {
-      var airHeight, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, margin, mouseLineDateFormat, moveMouseLine, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+    link: function(scope, element, attrs) {
+      var airHeight, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, margin, mouseLineDateFormat, moveMouseLine, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
       findObservationFor = function(site, date) {
         var reference, scored;
         reference = date.getTime();
@@ -275,7 +329,7 @@ angular.module('bom.plot', []).directive('bomPlot', function() {
       }).y1(function(d) {
         return windY(d.observation.gust_kmh);
       });
-      scope.plot = function(data) {
+      plot = function(data) {
         var buckets, colorByName, mostRecent, observations, plotBox, rainLabel, rainTracePerSite, rainTraces, site, svgRoot;
         plotBox = d3.select(".chart").select("svg").select("g");
         if (plotBox.empty()) {
@@ -412,6 +466,11 @@ angular.module('bom.plot', []).directive('bomPlot', function() {
         }));
         return d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "");
       };
+      scope.$watch(attrs.bomPlot, function(v) {
+        if (v) {
+          return Observations.load(v).then(plot);
+        }
+      }, true);
       showMouseLine = function() {
         d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
         return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
@@ -455,75 +514,12 @@ angular.module('bom.plot', []).directive('bomPlot', function() {
       };
     }
   };
-}).factory('Observations', function($http, $q) {
-  var loadStation;
-  loadStation = function(url) {
-    return $http({
-      method: 'GET',
-      url: url
-    });
-  };
-  return {
-    load: function(baseUrl) {
-      var urls;
-      if (baseUrl == null) {
-        baseUrl = "";
-      }
-      urls = BomStations.filter(function(s) {
-        return s.load;
-      }).map(function(s) {
-        return baseUrl + "/fwo/" + s.url + ".json";
-      });
-      return $q.all(urls.map(loadStation)).then(function(responses) {
-        return responses.map(function(r) {
-          return r.data;
-        });
-      })["catch"](function(data, status) {
-        return console.log(data, status);
-      });
-    }
-  };
-}).factory('Preferences', function() {
-  return {
-    load: function() {
-      var s, savedStations, _i, _len, _ref, _results;
-      if (localStorage) {
-        savedStations = localStorage.getItem("stations");
-        _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          s = _ref[_i];
-          _results.push(BomStations.filter(function(d) {
-            return d.name === s;
-          })[0].load = true);
-        }
-        return _results;
-      }
-    },
-    save: function() {
-      if (localStorage) {
-        return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
-          return d.load;
-        }).map(function(d) {
-          return d.name;
-        })));
-      }
-    }
-  };
 });
 
-angular.module('desktop', ['bom.plot']).controller('DesktopController', function($scope, Observations, Preferences) {
-  var loadThenPlot;
-  loadThenPlot = function() {
-    return Observations.load().then(function(d) {
-      return $scope.plot(d);
-    });
-  };
+angular.module('desktop', ['bom.observations', 'bom.plot']).controller('DesktopController', function($scope, BomStations, Preferences) {
   $scope.stations = BomStations;
-  $scope.reload = function() {
-    Preferences.save();
-    return loadThenPlot();
+  $scope.save = function() {
+    return Preferences.save();
   };
-  Preferences.load();
-  return loadThenPlot();
+  return Preferences.load();
 });

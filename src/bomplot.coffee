@@ -1,7 +1,7 @@
-angular.module('bom.plot', [])
-.directive('bomPlot', () ->
-  return {
-    link: (scope, element) ->
+angular.module('bom.plot', ['bom.observations'])
+.directive('bomPlot', (Observations) ->
+  {
+    link: (scope, element, attrs) ->
       findObservationFor = (site, date) ->
         reference = date.getTime()
         scored = site.values.map((d) ->
@@ -175,7 +175,7 @@ angular.module('bom.plot', [])
         .y0((d) -> windY(d.observation.wind_spd_kmh))
         .y1((d) -> windY(d.observation.gust_kmh))
 
-      scope.plot = (data) ->
+      plot = (data) ->
         plotBox = d3.select(".chart").select("svg").select("g")
         if plotBox.empty()
           svgRoot = d3.select(".chart").append("svg")
@@ -361,6 +361,11 @@ angular.module('bom.plot', [])
 
         d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "")
 
+      scope.$watch(attrs.bomPlot, (v) ->
+        if v
+          Observations.load(v).then(plot)
+      , true)
+
       showMouseLine = () ->
         d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
         d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
@@ -407,27 +412,5 @@ angular.module('bom.plot', [])
             position = d3.touches(chart[0][0], event.gesture.touches)
             moveMouseLine(position[0][0])
         )
-  }
-)
-.factory('Observations', ($http, $q) ->
-  loadStation = (url) -> $http({method: 'GET', url: url})
-  return {
-  load: (baseUrl="") ->
-    urls = BomStations.filter((s) -> s.load).map((s) -> baseUrl + "/fwo/" + s.url + ".json")
-    $q.all(urls.map(loadStation))
-    .then((responses) -> responses.map((r) -> r.data))
-    .catch((data, status) -> console.log(data, status))
-  }
-)
-.factory('Preferences', () ->
-  return {
-  load: () ->
-    if localStorage
-      savedStations = localStorage.getItem("stations")
-      for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
-        BomStations.filter((d) -> d.name == s)[0].load = true
-  save: () ->
-    if localStorage
-      localStorage.setItem("stations", JSON.stringify(BomStations.filter((d) -> d.load).map((d) -> d.name)))
   }
 )

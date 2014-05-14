@@ -1,12 +1,8 @@
-angular.module('desktop', ['bom.plot'])
-    .controller('DesktopController', ($scope, Observations, Preferences) ->
-        loadThenPlot = () -> Observations.load().then((d) -> $scope.plot(d))
-
+angular.module('desktop', ['bom.observations', 'bom.plot'])
+    .controller('DesktopController', ($scope, BomStations, Preferences) ->
         $scope.stations = BomStations
-        $scope.reload = () ->
+        $scope.save = () ->
           Preferences.save()
-          loadThenPlot()
 
         Preferences.load()
-        loadThenPlot()
     )

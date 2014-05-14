@@ -1,10 +1,35 @@
-BomStations = [
-  {name: "Nowra", url: "IDN60801/IDN60801.94750", load: false},
-  {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: false},
-  {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
-  {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false},
-  {name: "Canberra", url: "IDN60903/IDN60903.94926", load: false}
-]
+angular.module('bom.observations', [])
+.factory('BomStations', () ->
+  [
+    {name: "Nowra", url: "IDN60801/IDN60801.94750", load: false},
+    {name: "Mt Boyce", url: "IDN60801/IDN60801.94743", load: false},
+    {name: "Sydney (Observatory Hill)", url: "IDN60901/IDN60901.94768", load: false},
+    {name: "Horsham", url: "IDV60801/IDV60801.95839", load: false},
+    {name: "Canberra", url: "IDN60903/IDN60903.94926", load: false}
+  ]
+)
+.factory('Observations', ($http, $q) ->
+  loadStation = (url) -> $http({method: 'GET', url: url})
+  {
+    load: (stations) ->
+      urls = stations.filter((s) -> s.load).map((s) -> "/fwo/" + s.url + ".json")
+      $q.all(urls.map(loadStation))
+      .then((responses) -> responses.map((r) -> r.data))
+      .catch((data, status) -> console.log(data, status))
+  }
+)
+.factory('Preferences', (BomStations) ->
+  {
+    load: () ->
+      if localStorage
+        savedStations = localStorage.getItem("stations")
+        for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
+          BomStations.filter((d) -> d.name == s)[0].load = true
+    save: () ->
+      if localStorage
+        localStorage.setItem("stations", JSON.stringify(BomStations.filter((d) -> d.load).map((d) -> d.name)))
+  }
+)
 
 class BomObservations
   constructor: (@dataPerSite) ->
