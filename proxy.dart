@@ -55,8 +55,10 @@ void main() {
   HttpServer.bind(HOST, PORT).then((server) {
     server.listen((HttpRequest request) {
       var file = request.uri.path;
-      if (file == "/index.html" || file == "/") {
+      if (file == "/") {
         serveFile("index.html", request, "text/html");
+      } else if (file.endsWith(".html")) {
+        serveFile(file.substring(1), request, "text/html");
       } else if (file == "/favicon.ico") {
         serveFile("favicon.ico", request, "image/vnd.microsoft.icon");
       } else if (file.startsWith("/fwo")) {
@@ -74,6 +76,10 @@ void main() {
         serveFile(file.substring(1), request, "text/css");
       } else if (file.endsWith(".min.map")) {
         serveFile(file.substring(1), request, "application/json");
+      } else if (file.endsWith(".svg")) {
+        serveFile(file.substring(1), request, "text/xml+svg");
+      } else if (file.endsWith(".ttf") || file.endsWith(".woff")) {
+        serveFile(file.substring(1), request, "text/plain");
       } else {
         print("Not found: " + file);
         notFound(request);

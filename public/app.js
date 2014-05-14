@@ -1,3 +1,131 @@
+var BomObservations, BomStations;
+
+BomStations = [
+  {
+    name: "Nowra",
+    url: "IDN60801/IDN60801.94750",
+    load: false
+  }, {
+    name: "Mt Boyce",
+    url: "IDN60801/IDN60801.94743",
+    load: false
+  }, {
+    name: "Sydney (Observatory Hill)",
+    url: "IDN60901/IDN60901.94768",
+    load: false
+  }, {
+    name: "Horsham",
+    url: "IDV60801/IDV60801.95839",
+    load: false
+  }, {
+    name: "Canberra",
+    url: "IDN60903/IDN60903.94926",
+    load: false
+  }
+];
+
+BomObservations = (function() {
+  var parseDate;
+
+  function BomObservations(dataPerSite) {
+    this.dataPerSite = dataPerSite;
+    this.seriesPerSite = this.extractSeriesPerSite(this.dataPerSite);
+    this.rainTracesPerSite = this.extractRainTracePerSite(this.seriesPerSite);
+    this.nightsPerSite = this.extractNightsPerSite(this.dataPerSite);
+  }
+
+
+  /*
+    Crunching data. Probably best moved to server side... a
+   */
+
+  parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
+
+  BomObservations.prototype.extractNightsPerSite = function(sites) {
+    var parseDay;
+    parseDay = d3.time.format("%Y%m%d").parse;
+    return sites.map(function(site) {
+      var dates, endOfTime, lat, lon, nights, startOfTime, timesPerDay;
+      lat = 0;
+      lon = 0;
+      dates = d3.set();
+      site.observations.data.forEach(function(d) {
+        dates.add(d.local_date_time_full.substr(0, 8));
+        lat = d.lat;
+        return lon = d.lon;
+      });
+      timesPerDay = dates.values().sort(d3.ascending).map(function(d) {
+        var times;
+        times = SunCalc.getTimes(parseDay(d), lat, lon);
+        return {
+          up: times.sunrise,
+          down: times.sunset
+        };
+      });
+      startOfTime = new Date(0);
+      endOfTime = new Date(Math.pow(2, 32) * 1000);
+      nights = [
+        {
+          start: startOfTime,
+          end: timesPerDay[0].up
+        }
+      ];
+      timesPerDay.forEach(function(t, i) {
+        return nights.push({
+          start: t.down,
+          end: i + 1 < timesPerDay.length ? timesPerDay[i + 1].up : endOfTime
+        });
+      });
+      return nights;
+    });
+  };
+
+  BomObservations.prototype.extractSeriesPerSite = function(data) {
+    var ascendingByDate;
+    ascendingByDate = function(d1, d2) {
+      return d3.ascending(d1.date.getTime(), d2.date.getTime());
+    };
+    return data.map(function(site) {
+      return {
+        name: site.observations.header[0].name,
+        values: site.observations.data.map(function(d) {
+          return {
+            date: parseDate(d.local_date_time_full),
+            airTemp: d.air_temp,
+            apparentTemp: d.apparent_t,
+            observation: d
+          };
+        }).sort(ascendingByDate)
+      };
+    });
+  };
+
+  BomObservations.prototype.extractRainTracePerSite = function(sites) {
+    var endOfTime, startOfTime;
+    startOfTime = new Date(0);
+    endOfTime = new Date(Math.pow(2, 32) * 1000);
+    return sites.map(function(site) {
+      var values;
+      values = site.values.map(function(d, i, values) {
+        return {
+          start: i === 0 ? startOfTime : d.date,
+          end: i + 1 < values.length ? values[i + 1].date : endOfTime,
+          rain: parseFloat(d.observation.rain_trace)
+        };
+      }).filter(function(v) {
+        return v.rain > 0;
+      });
+      return {
+        name: site.name,
+        values: values
+      };
+    });
+  };
+
+  return BomObservations;
+
+})();
+
 angular.module('bom.plot', []).directive('bomPlot', function() {
   return {
     link: function(scope, element) {
@@ -327,137 +455,7 @@ angular.module('bom.plot', []).directive('bomPlot', function() {
       };
     }
   };
-});
-
-var BomObservations, BomStations;
-
-BomStations = [
-  {
-    name: "Nowra",
-    url: "IDN60801/IDN60801.94750",
-    load: false
-  }, {
-    name: "Mt Boyce",
-    url: "IDN60801/IDN60801.94743",
-    load: false
-  }, {
-    name: "Sydney (Observatory Hill)",
-    url: "IDN60901/IDN60901.94768",
-    load: false
-  }, {
-    name: "Horsham",
-    url: "IDV60801/IDV60801.95839",
-    load: false
-  }, {
-    name: "Canberra",
-    url: "IDN60903/IDN60903.94926",
-    load: false
-  }
-];
-
-BomObservations = (function() {
-  var parseDate;
-
-  function BomObservations(dataPerSite) {
-    this.dataPerSite = dataPerSite;
-    this.seriesPerSite = this.extractSeriesPerSite(this.dataPerSite);
-    this.rainTracesPerSite = this.extractRainTracePerSite(this.seriesPerSite);
-    this.nightsPerSite = this.extractNightsPerSite(this.dataPerSite);
-  }
-
-
-  /*
-    Crunching data. Probably best moved to server side... a
-   */
-
-  parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
-
-  BomObservations.prototype.extractNightsPerSite = function(sites) {
-    var parseDay;
-    parseDay = d3.time.format("%Y%m%d").parse;
-    return sites.map(function(site) {
-      var dates, endOfTime, lat, lon, nights, startOfTime, timesPerDay;
-      lat = 0;
-      lon = 0;
-      dates = d3.set();
-      site.observations.data.forEach(function(d) {
-        dates.add(d.local_date_time_full.substr(0, 8));
-        lat = d.lat;
-        return lon = d.lon;
-      });
-      timesPerDay = dates.values().sort(d3.ascending).map(function(d) {
-        var times;
-        times = SunCalc.getTimes(parseDay(d), lat, lon);
-        return {
-          up: times.sunrise,
-          down: times.sunset
-        };
-      });
-      startOfTime = new Date(0);
-      endOfTime = new Date(Math.pow(2, 32) * 1000);
-      nights = [
-        {
-          start: startOfTime,
-          end: timesPerDay[0].up
-        }
-      ];
-      timesPerDay.forEach(function(t, i) {
-        return nights.push({
-          start: t.down,
-          end: i + 1 < timesPerDay.length ? timesPerDay[i + 1].up : endOfTime
-        });
-      });
-      return nights;
-    });
-  };
-
-  BomObservations.prototype.extractSeriesPerSite = function(data) {
-    var ascendingByDate;
-    ascendingByDate = function(d1, d2) {
-      return d3.ascending(d1.date.getTime(), d2.date.getTime());
-    };
-    return data.map(function(site) {
-      return {
-        name: site.observations.header[0].name,
-        values: site.observations.data.map(function(d) {
-          return {
-            date: parseDate(d.local_date_time_full),
-            airTemp: d.air_temp,
-            apparentTemp: d.apparent_t,
-            observation: d
-          };
-        }).sort(ascendingByDate)
-      };
-    });
-  };
-
-  BomObservations.prototype.extractRainTracePerSite = function(sites) {
-    var endOfTime, startOfTime;
-    startOfTime = new Date(0);
-    endOfTime = new Date(Math.pow(2, 32) * 1000);
-    return sites.map(function(site) {
-      var values;
-      values = site.values.map(function(d, i, values) {
-        return {
-          start: i === 0 ? startOfTime : d.date,
-          end: i + 1 < values.length ? values[i + 1].date : endOfTime,
-          rain: parseFloat(d.observation.rain_trace)
-        };
-      }).filter(function(v) {
-        return v.rain > 0;
-      });
-      return {
-        name: site.name,
-        values: values
-      };
-    });
-  };
-
-  return BomObservations;
-
-})();
-
-angular.module('desktop', ['bom.plot']).factory('Observations', function($http, $q) {
+}).factory('Observations', function($http, $q) {
   var loadStation;
   loadStation = function(url) {
     return $http({
@@ -466,12 +464,15 @@ angular.module('desktop', ['bom.plot']).factory('Observations', function($http, 
     });
   };
   return {
-    load: function() {
+    load: function(baseUrl) {
       var urls;
+      if (baseUrl == null) {
+        baseUrl = "";
+      }
       urls = BomStations.filter(function(s) {
         return s.load;
       }).map(function(s) {
-        return "/fwo/" + s.url + ".json";
+        return baseUrl + "/fwo/" + s.url + ".json";
       });
       return $q.all(urls.map(loadStation)).then(function(responses) {
         return responses.map(function(r) {
@@ -509,7 +510,9 @@ angular.module('desktop', ['bom.plot']).factory('Observations', function($http, 
       }
     }
   };
-}).controller('DesktopController', function($scope, Observations, Preferences) {
+});
+
+angular.module('desktop', ['bom.plot']).controller('DesktopController', function($scope, Observations, Preferences) {
   var loadThenPlot;
   loadThenPlot = function() {
     return Observations.load().then(function(d) {
