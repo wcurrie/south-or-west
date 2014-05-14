@@ -1,96 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<style>
-
-    .chart {
-        font: 14px sans-serif;
-    }
-
-    .axis path,
-    .axis line {
-        fill: none;
-        stroke: #000;
-        shape-rendering: crispEdges;
-    }
-
-    .x.axis path {
-        display: none;
-    }
-
-    .line {
-        fill: none;
-        stroke-width: 1.5px;
-    }
-
-    .dewPointLine {
-        fill: none;
-        stroke-width: 1.5px;
-        stroke-dasharray: 5,5,1,5;
-    }
-
-    .area {
-        opacity: 0.5;
-    }
-
-    .area.windGust {
-        opacity: 0.3;
-    }
-
-    .chart {
-        float: left;
-    }
-
-    th {
-        text-align: left;
-    }
-
-    .night {
-        fill: black;
-        opacity: 0.07
-    }
-
-    .rainTrace rect {
-        opacity: 0.3;
-        stroke-width: 0;
-    }
-
-    .airDot {
-        fill: black;
-    }
-
-    .disclaimer {
-        clear: both;
-        font-size: 12px;
-    }
-
-    #source-list {
-        list-style: none;
-    }
-
-    @media only screen {
-        table {
-            width: 100%;
-        }
-        .tooltip {
-            font-size: 20px;
-        }
-        .explanation {
-            font-size: 18px;
-        }
-        td.wind {
-            min-width: 5em;
-        }
-    }
-
-    @media only screen and (min-width: 1000px) {
-        table {
-            width: inherit;
-        }
-        .tooltip, .explanation {
-            font-size: inherit;
-        }
-    }
-</style>
+<link rel="stylesheet" href="main.css"/>
 <body>
 <div class="chart"></div>
 <div class="tooltip" style="visibility: hidden">
@@ -128,6 +38,11 @@
 <script src="bower_components/suncalc/suncalc.js"></script>
 <script src="bower_components/hammerjs/hammer.min.js"></script>
 <script src="public/app.js"></script>
+<script>
+    bindMouseLineListeners();
+    showStationList();
+    loadThenPlot();
+</script>
 
 <script>
     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

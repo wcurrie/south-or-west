@@ -121,8 +121,9 @@ showToolTip = (now, observations) ->
   showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move
-load = () ->
-  urls = stations.filter((s) -> s.load).map((s) -> "/fwo/" + s.url + ".json")
+
+load = (baseUrl) ->
+  urls = stations.filter((s) -> s.load).map((s) -> baseUrl + "/fwo/" + s.url + ".json")
   Promise.all(urls.map(loadJson))
 
 margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 15}
@@ -212,15 +213,17 @@ windArea = d3.svg.area()
   .y0((d) -> windY(d.observation.wind_spd_kmh))
   .y1((d) -> windY(d.observation.gust_kmh))
 
-svg = d3.select(".chart").append("svg")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", plotBoxHeight + margin.top + margin.bottom)
-  .append("g")
-  .attr("class", "plotBox")
-  .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-
 plot = (data) ->
-  svg.selectAll("*").remove()
+  svg = d3.select(".chart").select("svg").select("g")
+  if svg.empty()
+    svg = d3.select(".chart").append("svg")
+      .attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom))
+      .append("g")
+      .attr("class", "plotBox")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+  else
+    svg.selectAll("*").remove()
+
   d3.select("#observations").selectAll("tr").remove()
 
   sites = extractSeriesPerSite(data)
@@ -392,8 +395,8 @@ plot = (data) ->
 
   d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "")
 
-loadThenPlot = () ->
-  load().then(plot).catch((error) ->
+loadThenPlot = (baseUrl="") ->
+  load(baseUrl).then(plot).catch((error) ->
     console.error(error)
     console.log(error.stack)
   )
@@ -426,24 +429,25 @@ moveMouseLine = (mouseX) ->
     observed = sites.map((site) -> findObservationFor(site, time))
     showToolTip(time, observed)
 
-chart = d3.select(".chart")
-chart
-  .on("mousemove", () ->
-    moveMouseLine(d3.mouse(this)[0])
-  )
-  .on("mouseover", showMouseLine)
-  .on("mouseout", hideMouseLine)
-  .on("touchstart", () ->
-    moveMouseLine(d3.touches(this)[0][0])
-    showMouseLine()
-  )
+bindMouseLineListeners = () ->
+  chart = d3.select(".chart")
+  chart
+    .on("mousemove", () ->
+      moveMouseLine(d3.mouse(this)[0])
+    )
+    .on("mouseover", showMouseLine)
+    .on("mouseout", hideMouseLine)
+    .on("touchstart", () ->
+      moveMouseLine(d3.touches(this)[0][0])
+      showMouseLine()
+    )
 
-Hammer(document.querySelector(".chart"))
-  .on("drag", (event) ->
-    event.gesture.preventDefault()
-    position = d3.touches(chart[0][0], event.gesture.touches)
-    moveMouseLine(position[0][0])
-)
+  Hammer(document.querySelector(".chart"))
+    .on("drag", (event) ->
+      event.gesture.preventDefault()
+      position = d3.touches(chart[0][0], event.gesture.touches)
+      moveMouseLine(position[0][0])
+  )
 
 showStationList = () ->
   lis = d3.select("#source-list")
@@ -458,11 +462,15 @@ showStationList = () ->
   lis.append("a")
     .attr("href", (d) -> "http://www.bom.gov.au/products/" + d.url + ".shtml")
     .text((d) -> d.name)
+  loadStations()
+  for s in stations when s.load
+    document.getElementById("show-" + s.name).checked = true
+
+loadStations = () ->
   if localStorage
     savedStations = localStorage.getItem("stations")
     for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
       stations.filter((d) -> d.name == s)[0].load = true
-      document.getElementById("show-" + s).checked = true
 
 saveStations = () ->
   if localStorage
@@ -473,9 +481,6 @@ toggleStation = (name) ->
   station.load = !station.load
   saveStations()
   loadThenPlot()
-
-showStationList()
-loadThenPlot()
 
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse
 

@@ -24,15 +24,16 @@ serveFile(String name, HttpRequest request, String type) {
   });
 }
 
-makeProxyRequest(HttpRequest request) {
-  // CORS headers only required if .html is hosted elsewhere
+addCorsHeaders(HttpRequest request) {
   request.response
     ..headers.set("Access-Control-Allow-Origin", "*")
     ..headers.set("Access-Control-Allow-Credentials", "true")
     ..headers.set("Access-Control-Allow-Methods", "OPTIONS, GET, PUT, POST, DELETE")
     ..headers.set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Request-With")
     ..headers.set("Access-Control-Max-Age", "86400");
+}
 
+makeProxyRequest(HttpRequest request) {
   http.get("http://www.bom.gov.au" + request.uri.toString()).then((http.Response response) {
     request.response
       ..headers.add("Content-Type", "application/json")
@@ -59,6 +60,8 @@ void main() {
       } else if (file == "/favicon.ico") {
         serveFile("favicon.ico", request, "image/vnd.microsoft.icon");
       } else if (file.startsWith("/fwo")) {
+        // CORS headers only required if .html is hosted elsewhere
+        addCorsHeaders(request);
         if (LOCAL_MODE) {
           serveFile("test-data/10-may/" + request.uri.pathSegments.last, request, "application/json");
         } else {
@@ -67,6 +70,8 @@ void main() {
         }
       } else if (file.endsWith(".js")) {
         serveFile(file.substring(1), request, "text/javascript");
+      } else if (file.endsWith(".css")) {
+        serveFile(file.substring(1), request, "text/css");
       } else if (file.endsWith(".min.map")) {
         serveFile(file.substring(1), request, "application/json");
       } else {

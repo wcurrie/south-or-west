@@ -1,4 +1,4 @@
-var airHeight, chart, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, svg, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, bindMouseLineListeners, color, dewPointLine, extractRainTracePerSite, extractSeriesPerSite, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, nightsPerSite, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, saveStations, showMouseLine, showStationList, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, stations, tempArea, tempLine, tempY, toggleStation, tooltipDateFormat, verticalMouseLine, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 stations = [
   {
@@ -155,12 +155,12 @@ showToolTip = function(now, observations) {
 
 sites = void 0;
 
-load = function() {
+load = function(baseUrl) {
   var urls;
   urls = stations.filter(function(s) {
     return s.load;
   }).map(function(s) {
-    return "/fwo/" + s.url + ".json";
+    return baseUrl + "/fwo/" + s.url + ".json";
   });
   return Promise.all(urls.map(loadJson));
 };
@@ -247,11 +247,14 @@ windArea = d3.svg.area().x(function(d) {
   return windY(d.observation.gust_kmh);
 });
 
-svg = d3.select(".chart").append("svg").attr("width", width + margin.left + margin.right).attr("height", plotBoxHeight + margin.top + margin.bottom).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
 plot = function(data) {
-  var buckets, colorByName, mostRecent, nights, rainLabel, rainTracePerSite, rainTraces, site;
-  svg.selectAll("*").remove();
+  var buckets, colorByName, mostRecent, nights, rainLabel, rainTracePerSite, rainTraces, site, svg;
+  svg = d3.select(".chart").select("svg").select("g");
+  if (svg.empty()) {
+    svg = d3.select(".chart").append("svg").attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom)).append("g").attr("class", "plotBox").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  } else {
+    svg.selectAll("*").remove();
+  }
   d3.select("#observations").selectAll("tr").remove();
   sites = extractSeriesPerSite(data);
   rainTracePerSite = extractRainTracePerSite(sites);
@@ -378,8 +381,11 @@ plot = function(data) {
   return d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "");
 };
 
-loadThenPlot = function() {
-  return load().then(plot)["catch"](function(error) {
+loadThenPlot = function(baseUrl) {
+  if (baseUrl == null) {
+    baseUrl = "";
+  }
+  return load(baseUrl).then(plot)["catch"](function(error) {
     console.error(error);
     return console.log(error.stack);
   });
@@ -409,24 +415,25 @@ moveMouseLine = function(mouseX) {
   }
 };
 
-chart = d3.select(".chart");
-
-chart.on("mousemove", function() {
-  return moveMouseLine(d3.mouse(this)[0]);
-}).on("mouseover", showMouseLine).on("mouseout", hideMouseLine).on("touchstart", function() {
-  moveMouseLine(d3.touches(this)[0][0]);
-  return showMouseLine();
-});
-
-Hammer(document.querySelector(".chart")).on("drag", function(event) {
-  var position;
-  event.gesture.preventDefault();
-  position = d3.touches(chart[0][0], event.gesture.touches);
-  return moveMouseLine(position[0][0]);
-});
+bindMouseLineListeners = function() {
+  var chart;
+  chart = d3.select(".chart");
+  chart.on("mousemove", function() {
+    return moveMouseLine(d3.mouse(this)[0]);
+  }).on("mouseover", showMouseLine).on("mouseout", hideMouseLine).on("touchstart", function() {
+    moveMouseLine(d3.touches(this)[0][0]);
+    return showMouseLine();
+  });
+  return Hammer(document.querySelector(".chart")).on("drag", function(event) {
+    var position;
+    event.gesture.preventDefault();
+    position = d3.touches(chart[0][0], event.gesture.touches);
+    return moveMouseLine(position[0][0]);
+  });
+};
 
 showStationList = function() {
-  var lis, s, savedStations, _i, _len, _ref, _results;
+  var lis, s, _i, _len, _results;
   lis = d3.select("#source-list").selectAll("li").data(stations).enter().append("li");
   lis.append("input").attr("type", "checkbox").attr("onclick", function(d) {
     return "toggleStation('" + d.name + "')";
@@ -438,16 +445,28 @@ showStationList = function() {
   }).text(function(d) {
     return d.name;
   });
+  loadStations();
+  _results = [];
+  for (_i = 0, _len = stations.length; _i < _len; _i++) {
+    s = stations[_i];
+    if (s.load) {
+      _results.push(document.getElementById("show-" + s.name).checked = true);
+    }
+  }
+  return _results;
+};
+
+loadStations = function() {
+  var s, savedStations, _i, _len, _ref, _results;
   if (localStorage) {
     savedStations = localStorage.getItem("stations");
     _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       s = _ref[_i];
-      stations.filter(function(d) {
+      _results.push(stations.filter(function(d) {
         return d.name === s;
-      })[0].load = true;
-      _results.push(document.getElementById("show-" + s).checked = true);
+      })[0].load = true);
     }
     return _results;
   }
@@ -472,10 +491,6 @@ toggleStation = function(name) {
   saveStations();
   return loadThenPlot();
 };
-
-showStationList();
-
-loadThenPlot();
 
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
 

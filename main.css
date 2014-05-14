@@ -1,0 +1,98 @@
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.x.axis path {
+    display: none;
+}
+
+.line {
+    fill: none;
+    stroke-width: 1.5px;
+}
+
+.dewPointLine {
+    fill: none;
+    stroke-width: 1.5px;
+    stroke-dasharray: 5,5,1,5;
+}
+
+.area {
+    opacity: 0.5;
+}
+
+.area.windGust {
+    opacity: 0.3;
+}
+
+th {
+    text-align: left;
+}
+
+.night {
+    fill: black;
+    opacity: 0.07
+}
+
+.rainTrace rect {
+    opacity: 0.3;
+    stroke-width: 0;
+}
+
+.airDot {
+    fill: black;
+}
+
+.disclaimer {
+    clear: both;
+    font-size: 12px;
+}
+
+#source-list {
+    list-style: none;
+}
+
+@media only screen {
+    .chart {
+        font: 18px sans-serif;
+        width: 100%;
+        float: none;
+    }
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+    table {
+        width: 100%;
+    }
+    .tooltip {
+        font-size: 20px;
+    }
+    .explanation {
+        font-size: 18px;
+    }
+    td.wind {
+        min-width: 5em;
+    }
+}
+
+@media only screen and (min-width: 1000px) {
+    .chart {
+        font: 14px sans-serif;
+        width: inherit;
+        float: left;
+    }
+    svg {
+        width: 960px;
+        height: 730px;
+    }
+    table {
+        width: inherit;
+    }
+    .tooltip, .explanation {
+        font-size: inherit;
+    }
+}
