@@ -9,15 +9,26 @@ angular.module('desktop', [])
               .catch((data, status) -> console.log(data, status))
         }
     )
-    .controller('DesktopController', ($scope, Observations) ->
+    .factory('Preferences', () ->
+      return {
+        load: () ->
+          if localStorage
+            savedStations = localStorage.getItem("stations")
+            for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
+              BomStations.filter((d) -> d.name == s)[0].load = true
+        save: () ->
+          if localStorage
+            localStorage.setItem("stations", JSON.stringify(BomStations.filter((d) -> d.load).map((d) -> d.name)))
+      }
+    )
+    .controller('DesktopController', ($scope, Observations, Preferences) ->
         loadThenPlot = () -> Observations.load().then((d) -> plot(d, $scope))
 
         $scope.stations = BomStations
         $scope.reload = () ->
-          savePreferredStations()
+          Preferences.save()
           loadThenPlot()
 
-        loadPreferredStations()
-
+        Preferences.load()
         loadThenPlot()
     )

@@ -1,4 +1,4 @@
-var airHeight, color, createMouseLine, currentNgScope, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, loadPreferredStations, margin, mouseLineDateFormat, moveMouseLine, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, savePreferredStations, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+var airHeight, color, createMouseLine, currentNgScope, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, margin, mouseLineDateFormat, moveMouseLine, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 findObservationFor = function(site, date) {
   var reference, scored;
@@ -364,32 +364,6 @@ createMouseLine = function(svgRoot) {
   });
 };
 
-loadPreferredStations = function() {
-  var s, savedStations, _i, _len, _ref, _results;
-  if (localStorage) {
-    savedStations = localStorage.getItem("stations");
-    _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      s = _ref[_i];
-      _results.push(BomStations.filter(function(d) {
-        return d.name === s;
-      })[0].load = true);
-    }
-    return _results;
-  }
-};
-
-savePreferredStations = function() {
-  if (localStorage) {
-    return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
-      return d.load;
-    }).map(function(d) {
-      return d.name;
-    })));
-  }
-};
-
 parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
 
 var BomObservations, BomStations;
@@ -541,7 +515,34 @@ angular.module('desktop', []).factory('Observations', function($http, $q) {
       });
     }
   };
-}).controller('DesktopController', function($scope, Observations) {
+}).factory('Preferences', function() {
+  return {
+    load: function() {
+      var s, savedStations, _i, _len, _ref, _results;
+      if (localStorage) {
+        savedStations = localStorage.getItem("stations");
+        _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          s = _ref[_i];
+          _results.push(BomStations.filter(function(d) {
+            return d.name === s;
+          })[0].load = true);
+        }
+        return _results;
+      }
+    },
+    save: function() {
+      if (localStorage) {
+        return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
+          return d.load;
+        }).map(function(d) {
+          return d.name;
+        })));
+      }
+    }
+  };
+}).controller('DesktopController', function($scope, Observations, Preferences) {
   var loadThenPlot;
   loadThenPlot = function() {
     return Observations.load().then(function(d) {
@@ -550,9 +551,9 @@ angular.module('desktop', []).factory('Observations', function($http, $q) {
   };
   $scope.stations = BomStations;
   $scope.reload = function() {
-    savePreferredStations();
+    Preferences.save();
     return loadThenPlot();
   };
-  loadPreferredStations();
+  Preferences.load();
   return loadThenPlot();
 });
