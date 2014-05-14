@@ -4,7 +4,7 @@
 <body ng-app="desktop" ng-controller="DesktopController">
 <div class="chart"></div>
 <div class="tooltip" style="visibility: hidden">
-    <h3>At <span id="time"></span></h3>
+    <h3>At <span id="time">{{now}}</span></h3>
     <table>
         <thead>
             <tr>
@@ -16,7 +16,16 @@
                 <th>Wind</th>
             </tr>
         </thead>
-        <tbody id="observations"></tbody>
+        <tbody id="observations">
+            <tr ng-repeat="o in currentObservations">
+                <td class="name">{{o.name}}</td>
+                <td class="airTemp">{{o.air_temp}}</td>
+                <td class="apparentTemp">{{o.apparent_t}}</td>
+                <td class="humidity">{{o.rel_hum}}</td>
+                <td class="rain">{{o.rain_trace}}</td>
+                <td class="wind">{{o.wind_spd_kmh + " " + o.wind_dir}}</td>
+            </tr>
+        </tbody>
     </table>
 </div>
 <div class="explanation" style="visibility: hidden">
@@ -38,7 +47,6 @@
     <p>The smooth lines are a bit of a lie. The BOM samples are about every 30 minutes.</p>
 </div>
 <script src="bower_components/d3/d3.min.js"></script>
-<script src="promise-1.0.0.min.js"></script>
 <script src="bower_components/suncalc/suncalc.js"></script>
 <script src="bower_components/hammerjs/hammer.min.js"></script>
 <script src="bower_components/angular/angular.min.js"></script>

@@ -1,11 +1,3 @@
-loadJson = (url) ->
-  new Promise (resolve, reject) ->
-    d3.json url, (error, data) ->
-      if error
-        reject error
-      else
-        resolve data
-
 findObservationFor = (site, date) ->
   reference = date.getTime()
   scored = site.values.map((d) ->
@@ -73,29 +65,9 @@ mouseLineDateFormat = d3.time.format("%a %H:%M")
 tooltipDateFormat = d3.time.format("%d %B %H:%M")
 
 showToolTip = (now, observations) ->
-  document.getElementById("time").textContent = tooltipDateFormat(now)
-
-  rows = d3.select("#observations")
-    .selectAll("tr")
-    .data(observations)
-
-  row = rows
-    .enter()
-    .append("tr")
-
-  row.append("td").attr("class", "name")
-  row.append("td").attr("class", "airTemp")
-  row.append("td").attr("class", "apparentTemp")
-  row.append("td").attr("class", "humidity")
-  row.append("td").attr("class", "rain")
-  row.append("td").attr("class", "wind")
-
-  rows.select(".name").text((d) -> d.name)
-  rows.select(".airTemp").text((d) -> d.air_temp)
-  rows.select(".apparentTemp").text((d) -> d.apparent_t)
-  rows.select(".humidity").text((d) -> d.rel_hum)
-  rows.select(".rain").text((d) -> d.rain_trace)
-  rows.select(".wind").text((d) -> d.wind_spd_kmh + " " + d.wind_dir)
+  if currentNgScope
+    currentNgScope.now = tooltipDateFormat(now)
+    currentNgScope.currentObservations = observations
 
   usedYValues = []
   collisionGuard = (newY) ->
@@ -112,10 +84,7 @@ showToolTip = (now, observations) ->
   showTimeAtTopOfMouseLine(now)
 
 sites = undefined  # for mouse move
-
-load = (baseUrl) ->
-  urls = BomStations.filter((s) -> s.load).map((s) -> baseUrl + "/fwo/" + s.url + ".json")
-  Promise.all(urls.map(loadJson))
+currentNgScope = undefined
 
 margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 15}
 width = 960 - margin.left - margin.right
@@ -204,7 +173,8 @@ windArea = d3.svg.area()
   .y0((d) -> windY(d.observation.wind_spd_kmh))
   .y1((d) -> windY(d.observation.gust_kmh))
 
-plot = (data) ->
+plot = (data, ngScope) ->
+  currentNgScope = ngScope
   plotBox = d3.select(".chart").select("svg").select("g")
   if plotBox.empty()
     svgRoot = d3.select(".chart").append("svg")
@@ -390,12 +360,6 @@ plot = (data) ->
 
   d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "")
 
-loadThenPlot = (baseUrl="") ->
-  load(baseUrl).then(plot).catch((error) ->
-    console.error(error)
-    console.log(error.stack)
-  )
-
 showMouseLine = () ->
   d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5)
   d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1)
@@ -412,6 +376,8 @@ moveMouseLine = (mouseX) ->
     time = x.invert(translatedMouseX)
     observed = sites.map((site) -> findObservationFor(site, time))
     showToolTip(time, observed)
+    if currentNgScope
+      currentNgScope.$digest()
 
 createMouseLine = (svgRoot) ->
   svgRoot.append("line")

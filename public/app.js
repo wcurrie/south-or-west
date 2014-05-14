@@ -1,16 +1,4 @@
-var airHeight, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, load, loadJson, loadPreferredStations, loadThenPlot, margin, mouseLineDateFormat, moveMouseLine, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, savePreferredStations, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
-
-loadJson = function(url) {
-  return new Promise(function(resolve, reject) {
-    return d3.json(url, function(error, data) {
-      if (error) {
-        return reject(error);
-      } else {
-        return resolve(data);
-      }
-    });
-  });
-};
+var airHeight, color, createMouseLine, currentNgScope, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, loadPreferredStations, margin, mouseLineDateFormat, moveMouseLine, parseDate, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, savePreferredStations, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
 
 findObservationFor = function(site, date) {
   var reference, scored;
@@ -81,34 +69,11 @@ mouseLineDateFormat = d3.time.format("%a %H:%M");
 tooltipDateFormat = d3.time.format("%d %B %H:%M");
 
 showToolTip = function(now, observations) {
-  var collisionGuard, row, rows, usedYValues;
-  document.getElementById("time").textContent = tooltipDateFormat(now);
-  rows = d3.select("#observations").selectAll("tr").data(observations);
-  row = rows.enter().append("tr");
-  row.append("td").attr("class", "name");
-  row.append("td").attr("class", "airTemp");
-  row.append("td").attr("class", "apparentTemp");
-  row.append("td").attr("class", "humidity");
-  row.append("td").attr("class", "rain");
-  row.append("td").attr("class", "wind");
-  rows.select(".name").text(function(d) {
-    return d.name;
-  });
-  rows.select(".airTemp").text(function(d) {
-    return d.air_temp;
-  });
-  rows.select(".apparentTemp").text(function(d) {
-    return d.apparent_t;
-  });
-  rows.select(".humidity").text(function(d) {
-    return d.rel_hum;
-  });
-  rows.select(".rain").text(function(d) {
-    return d.rain_trace;
-  });
-  rows.select(".wind").text(function(d) {
-    return d.wind_spd_kmh + " " + d.wind_dir;
-  });
+  var collisionGuard, usedYValues;
+  if (currentNgScope) {
+    currentNgScope.now = tooltipDateFormat(now);
+    currentNgScope.currentObservations = observations;
+  }
   usedYValues = [];
   collisionGuard = function(newY) {
     var collision;
@@ -131,15 +96,7 @@ showToolTip = function(now, observations) {
 
 sites = void 0;
 
-load = function(baseUrl) {
-  var urls;
-  urls = BomStations.filter(function(s) {
-    return s.load;
-  }).map(function(s) {
-    return baseUrl + "/fwo/" + s.url + ".json";
-  });
-  return Promise.all(urls.map(loadJson));
-};
+currentNgScope = void 0;
 
 margin = {
   top: 20,
@@ -223,8 +180,9 @@ windArea = d3.svg.area().x(function(d) {
   return windY(d.observation.gust_kmh);
 });
 
-plot = function(data) {
+plot = function(data, ngScope) {
   var buckets, colorByName, mostRecent, observations, plotBox, rainLabel, rainTracePerSite, rainTraces, site, svgRoot;
+  currentNgScope = ngScope;
   plotBox = d3.select(".chart").select("svg").select("g");
   if (plotBox.empty()) {
     svgRoot = d3.select(".chart").append("svg").attr("viewBox", "0 0 " + (width + margin.left + margin.right) + " " + (plotBoxHeight + margin.top + margin.bottom));
@@ -359,16 +317,6 @@ plot = function(data) {
   return d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "");
 };
 
-loadThenPlot = function(baseUrl) {
-  if (baseUrl == null) {
-    baseUrl = "";
-  }
-  return load(baseUrl).then(plot)["catch"](function(error) {
-    console.error(error);
-    return console.log(error.stack);
-  });
-};
-
 showMouseLine = function() {
   d3.select(".mouseLine").transition().duration(250).style("opacity", 0.5);
   return d3.selectAll(".mouseTip").transition().duration(250).style("opacity", 1);
@@ -391,7 +339,10 @@ moveMouseLine = function(mouseX) {
     observed = sites.map(function(site) {
       return findObservationFor(site, time);
     });
-    return showToolTip(time, observed);
+    showToolTip(time, observed);
+    if (currentNgScope) {
+      return currentNgScope.$digest();
+    }
   }
 };
 
@@ -593,7 +544,9 @@ angular.module('desktop', []).factory('Observations', function($http, $q) {
 }).controller('DesktopController', function($scope, Observations) {
   var loadThenPlot;
   loadThenPlot = function() {
-    return Observations.load().then(plot);
+    return Observations.load().then(function(d) {
+      return plot(d, $scope);
+    });
   };
   $scope.stations = BomStations;
   $scope.reload = function() {

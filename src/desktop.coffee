@@ -10,7 +10,7 @@ angular.module('desktop', [])
         }
     )
     .controller('DesktopController', ($scope, Observations) ->
-        loadThenPlot = () -> Observations.load().then(plot)
+        loadThenPlot = () -> Observations.load().then((d) -> plot(d, $scope))
 
         $scope.stations = BomStations
         $scope.reload = () ->
