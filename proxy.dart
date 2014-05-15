@@ -56,7 +56,9 @@ void main() {
     server.listen((HttpRequest request) {
       var file = request.uri.path;
       if (file == "/") {
-        serveFile("index.html", request, "text/html");
+        var userAgent = request.headers.value(HttpHeaders.USER_AGENT);
+        var index = userAgent != null && userAgent.contains("Mobi") ? "mobile.html" : "index.html";
+        serveFile(index, request, "text/html");
       } else if (file.endsWith(".html")) {
         serveFile(file.substring(1), request, "text/html");
       } else if (file == "/favicon.ico") {
