@@ -190,7 +190,7 @@ BomObservations = (function() {
 angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(Observations) {
   return {
     link: function(scope, element, attrs) {
-      var airHeight, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, margin, mouseLineDateFormat, moveMouseLine, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
+      var airHeight, attrOrDefault, color, createMouseLine, dewPointLine, findObservationFor, hideMouseLine, humidityLine, humidityY, leftHumidityYAxis, leftTemperatureYAxis, margin, mouseLineDateFormat, moveMouseLine, plot, plotBoxHeight, plotYRanges, rainHeight, rainY, rainYAxis, showMouseLine, showTimeAtTopOfMouseLine, showToolTip, showValueAtMouselineIntersection, sites, tempArea, tempLine, tempY, tooltipDateFormat, width, windArea, windHeight, windLine, windY, windYAxis, x, xAxis;
       findObservationFor = function(site, date) {
         var reference, scored;
         reference = date.getTime();
@@ -278,18 +278,25 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
         return showTimeAtTopOfMouseLine(now);
       };
       sites = void 0;
+      attrOrDefault = function(attr, d) {
+        if (attrs[attr]) {
+          return +attrs[attr];
+        } else {
+          return d;
+        }
+      };
       margin = {
         top: 20,
         right: 80,
         bottom: 30,
         left: 50,
-        graphGap: 15
+        graphGap: attrOrDefault("gapHeight", 15)
       };
       width = 960 - margin.left - margin.right;
-      plotBoxHeight = 650 + margin.graphGap * 2;
-      airHeight = 450;
-      rainHeight = 100;
-      windHeight = 100;
+      airHeight = attrOrDefault("airHeight", 450);
+      rainHeight = attrOrDefault("rainHeight", 100);
+      windHeight = attrOrDefault("windHeight", 100);
+      plotBoxHeight = (airHeight + rainHeight + windHeight) + margin.graphGap * 2;
       plotYRanges = [[airHeight, 0], [airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap], [airHeight + margin.graphGap + windHeight + margin.graphGap + rainHeight, airHeight + margin.graphGap + windHeight + margin.graphGap]];
       x = d3.time.scale().range([0, width]).clamp(true);
       tempY = d3.scale.linear().range(plotYRanges[0]);
@@ -471,7 +478,7 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
         showToolTip(mostRecent[0].date, mostRecent.map(function(d) {
           return d.observation;
         }));
-        return d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "");
+        return d3.selectAll(".tooltip,.explanation").style("visibility", "");
       };
       scope.$watch(attrs.bomPlot, function(v) {
         if (v) {
@@ -526,5 +533,3 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
 angular.module('desktop', ['bom.observations', 'bom.plot']).controller('DesktopController', function($scope, Preferences) {
   return $scope.stations = Preferences.load();
 });
-
-

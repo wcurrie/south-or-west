@@ -88,12 +88,14 @@ angular.module('bom.plot', ['bom.observations'])
 
       sites = undefined  # for mouse move
 
-      margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: 15}
+      attrOrDefault = (attr, d) -> if attrs[attr] then +attrs[attr] else d
+
+      margin = {top: 20, right: 80, bottom: 30, left: 50, graphGap: attrOrDefault("gapHeight", 15)}
       width = 960 - margin.left - margin.right
-      plotBoxHeight = 650 + margin.graphGap*2
-      airHeight = 450
-      rainHeight = 100
-      windHeight = 100
+      airHeight = attrOrDefault "airHeight", 450
+      rainHeight = attrOrDefault "rainHeight", 100
+      windHeight = attrOrDefault "windHeight", 100
+      plotBoxHeight = (airHeight + rainHeight + windHeight) + margin.graphGap*2
       plotYRanges = [
         [airHeight, 0],
         [airHeight + margin.graphGap + windHeight, airHeight + margin.graphGap],
@@ -359,7 +361,7 @@ angular.module('bom.plot', ['bom.observations'])
         mostRecent = sites.map((site) -> site.values[site.values.length-1])
         showToolTip(mostRecent[0].date, mostRecent.map((d) -> d.observation))
 
-        d3.selectAll(".tooltip,.explanation,.disclaimer").style("visibility", "")
+        d3.selectAll(".tooltip,.explanation").style("visibility", "")
 
       scope.$watch(attrs.bomPlot, (v) ->
         if v

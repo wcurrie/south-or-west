@@ -46,11 +46,6 @@ th {
     fill: black;
 }
 
-.disclaimer {
-    clear: both;
-    font-size: 12px;
-}
-
 #source-list {
     list-style: none;
 }
