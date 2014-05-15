@@ -25,9 +25,18 @@ angular.module('bom.observations', [])
         savedStations = localStorage.getItem("stations")
         for s in JSON.parse(savedStations || '["Nowra", "Mt Boyce"]')
           BomStations.filter((d) -> d.name == s)[0].load = true
-    save: () ->
+      BomStations
+    save: (stations) ->
       if localStorage
-        localStorage.setItem("stations", JSON.stringify(BomStations.filter((d) -> d.load).map((d) -> d.name)))
+        localStorage.setItem("stations", JSON.stringify(stations.filter((d) -> d.load).map((d) -> d.name)))
+  }
+)
+.directive('bomPersist', (Preferences) ->
+  {
+    link: (scope, element, attrs) ->
+      scope.$watch(attrs.bomPersist, (v) ->
+        Preferences.save(v)
+      , true);
   }
 )
 

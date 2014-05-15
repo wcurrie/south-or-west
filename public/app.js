@@ -52,28 +52,35 @@ angular.module('bom.observations', []).factory('BomStations', function() {
 }).factory('Preferences', function(BomStations) {
   return {
     load: function() {
-      var s, savedStations, _i, _len, _ref, _results;
+      var s, savedStations, _i, _len, _ref;
       if (localStorage) {
         savedStations = localStorage.getItem("stations");
         _ref = JSON.parse(savedStations || '["Nowra", "Mt Boyce"]');
-        _results = [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           s = _ref[_i];
-          _results.push(BomStations.filter(function(d) {
+          BomStations.filter(function(d) {
             return d.name === s;
-          })[0].load = true);
+          })[0].load = true;
         }
-        return _results;
       }
+      return BomStations;
     },
-    save: function() {
+    save: function(stations) {
       if (localStorage) {
-        return localStorage.setItem("stations", JSON.stringify(BomStations.filter(function(d) {
+        return localStorage.setItem("stations", JSON.stringify(stations.filter(function(d) {
           return d.load;
         }).map(function(d) {
           return d.name;
         })));
       }
+    }
+  };
+}).directive('bomPersist', function(Preferences) {
+  return {
+    link: function(scope, element, attrs) {
+      return scope.$watch(attrs.bomPersist, function(v) {
+        return Preferences.save(v);
+      }, true);
     }
   };
 });
@@ -516,10 +523,8 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
   };
 });
 
-angular.module('desktop', ['bom.observations', 'bom.plot']).controller('DesktopController', function($scope, BomStations, Preferences) {
-  $scope.stations = BomStations;
-  $scope.save = function() {
-    return Preferences.save();
-  };
-  return Preferences.load();
+angular.module('desktop', ['bom.observations', 'bom.plot']).controller('DesktopController', function($scope, Preferences) {
+  return $scope.stations = Preferences.load();
 });
+
+

@@ -34,9 +34,9 @@
         These observations from the <a href="http://bom.gov.au">BOM</a> are being plotted using <a href="http://d3js.org/">d3.js</a>
     </p>
 
-    <ul id="source-list">
+    <ul id="source-list" bom-persist="stations">
         <li ng-repeat="s in stations">
-            <input type="checkbox" ng-model="s.load" ng-change="save()"/>
+            <input type="checkbox" ng-model="s.load"/>
             <a href="http://www.bom.gov.au/products/{{s.url}}.shtml">{{s.name}}</a>
         </li>
     </ul>
