@@ -74,20 +74,26 @@ th {
     }
 }
 
-@media only screen and (min-width: 1000px) {
+@media only screen and (min-width: 800px) {
     .chart {
         font: 14px sans-serif;
-        width: inherit;
+        width: 70%;
+        min-height: 100%;
         float: left;
-    }
-    svg {
-        width: 960px;
-        height: 730px;
     }
     table {
         width: inherit;
     }
     .tooltip, .explanation {
         font-size: inherit;
+    }
+}
+
+@media only screen and (min-width: 800px) and (max-width: 1300px) {
+    .tooltip, .explanation {
+        font-size: 10px;
+    }
+    #source-list {
+        font-size: 14px;
     }
 }
