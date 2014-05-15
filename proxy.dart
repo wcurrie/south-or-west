@@ -52,18 +52,21 @@ notFound(HttpRequest request) {
 void main() {
   print(Platform.executableArguments);
 
+  Map fileTypes = {
+    "html": "text/html",
+    "js": "text/javascript",
+    "css": "text/css",
+    "map": "application.json", // source map
+    "svg": "text/xml+svg",
+    "ttf": "text/plain",
+    "woff": "text/plain",
+    "ico": "image/vnd.microsoft.icon",
+  };
+
   HttpServer.bind(HOST, PORT).then((server) {
     server.listen((HttpRequest request) {
       var file = request.uri.path;
-      if (file == "/") {
-        var userAgent = request.headers.value(HttpHeaders.USER_AGENT);
-        var index = userAgent != null && userAgent.contains("Mobi") ? "mobile.html" : "index.html";
-        serveFile(index, request, "text/html");
-      } else if (file.endsWith(".html")) {
-        serveFile(file.substring(1), request, "text/html");
-      } else if (file == "/favicon.ico") {
-        serveFile("favicon.ico", request, "image/vnd.microsoft.icon");
-      } else if (file.startsWith("/fwo")) {
+      if (file.startsWith("/fwo")) {
         // CORS headers only required if .html is hosted elsewhere
         addCorsHeaders(request);
         if (LOCAL_MODE) {
@@ -72,17 +75,21 @@ void main() {
           print("proxying " + request.uri.toString());
           makeProxyRequest(request);
         }
-      } else if (file.endsWith(".js")) {
-        serveFile(file.substring(1), request, "text/javascript");
-      } else if (file.endsWith(".css")) {
-        serveFile(file.substring(1), request, "text/css");
-      } else if (file.endsWith(".min.map")) {
-        serveFile(file.substring(1), request, "application/json");
-      } else if (file.endsWith(".svg")) {
-        serveFile(file.substring(1), request, "text/xml+svg");
-      } else if (file.endsWith(".ttf") || file.endsWith(".woff")) {
-        serveFile(file.substring(1), request, "text/plain");
       } else {
+        if (file == "/") {
+          var userAgent = request.headers.value(HttpHeaders.USER_AGENT);
+          file = userAgent != null && userAgent.contains("Mobi") ? "/mobile.html" : "/index.html";
+        }
+        int dot = file.lastIndexOf(".");
+        if (dot != -1) {
+          var suffix = file.substring(dot + 1);
+          String contentType = fileTypes[suffix];
+          if (contentType != null) {
+            serveFile(file.substring(1), request, contentType);
+            return;
+          }
+        }
+
         print("Not found: " + file);
         notFound(request);
       }
