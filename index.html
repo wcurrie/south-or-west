@@ -36,8 +36,8 @@
 
     <ul id="source-list" bom-persist="stations">
         <li ng-repeat="s in stations">
-            <input type="checkbox" ng-model="s.load"/>
-            <a href="http://www.bom.gov.au/products/{{s.url}}.shtml">{{s.name}}</a>
+            <input type="checkbox" ng-model="s.load" id="show-{{s.name}}"/>
+            <label for="show-{{s.name}}">{{s.name}}</label>
         </li>
     </ul>
 
