@@ -1,5 +1,10 @@
 <ion-view title="Stations">
   <ion-content class="has-header padding">
+      <ion-nav-buttons side="left">
+          <ion-nav-back-button class="button-icon icon ion-chevron-left">
+              Back
+          </ion-nav-back-button>
+      </ion-nav-buttons>
       <ion-list bom-persist="stations">
           <ion-checkbox ng-repeat="s in stations" ng-model="s.load">{{s.name}}</ion-checkbox>
       </ion-list>
