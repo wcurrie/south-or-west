@@ -18,7 +18,9 @@ angular.module('bom.plot', ['bom.observations'])
         xPos = x(now)
         yPos = (d) -> yScale.call(null, d[attr])
         clearOfRightYAxis = xPos < x.range()[1] - 40
-        debounced = observations.filter((d) -> collisionGuard(yPos(d)))
+        debounced = observations.filter((d) ->
+          d[attr] != null and collisionGuard(yPos(d))
+        )
 
         tipClassName = "tip-" + attr
         dotClassName = "dot" + attr
@@ -305,7 +307,7 @@ angular.module('bom.plot', ['bom.observations'])
           .attr("d", (d) -> windLine(d.values))
           .style("stroke", colorByName)
 
-        site.append("path")
+        site.filter((d) -> d.values[0].observation.gust_kmh != null).append("path")
           .attr("class", "area windGust")
           .style("fill", colorByName)
           .datum((d) -> d.values)

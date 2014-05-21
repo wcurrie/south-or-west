@@ -216,7 +216,7 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
         };
         clearOfRightYAxis = xPos < x.range()[1] - 40;
         debounced = observations.filter(function(d) {
-          return collisionGuard(yPos(d));
+          return d[attr] !== null && collisionGuard(yPos(d));
         });
         tipClassName = "tip-" + attr;
         dotClassName = "dot" + attr;
@@ -424,7 +424,9 @@ angular.module('bom.plot', ['bom.observations']).directive('bomPlot', function(O
         site.append("path").attr("class", "line").attr("d", function(d) {
           return windLine(d.values);
         }).style("stroke", colorByName);
-        site.append("path").attr("class", "area windGust").style("fill", colorByName).datum(function(d) {
+        site.filter(function(d) {
+          return d.values[0].observation.gust_kmh !== null;
+        }).append("path").attr("class", "area windGust").style("fill", colorByName).datum(function(d) {
           return d.values;
         }).attr("d", windArea);
         site.append("path").attr("class", "line").attr("d", function(d) {
